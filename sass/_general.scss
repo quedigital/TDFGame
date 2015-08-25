@@ -1,0 +1,51 @@
+#froome {
+	background-color: darkblue;
+	top: 10px;
+}
+
+#quintana {
+	background-color: darkgreen;
+	top: 40px;
+}
+
+button#turn {
+	position: absolute;
+	top: 100px;
+	right: 0;
+}
+
+button#play {
+	position: absolute;
+	top: 150px;
+	right: 0;
+}
+
+#map-canvas {
+	width: 100%;
+	height: 500px;
+}
+
+.elevation-view {
+	width: 100%;
+	padding: 5px;
+	border: 1px solid black;
+
+	.interior {
+		background-color: lightblue;
+		position: relative;
+		overflow: hidden;
+
+		svg {
+			position: absolute;
+			top: 0;
+			left: 0;
+			z-index: 1000;
+			pointer-events: none;
+		}
+
+		img.rider {
+			position: absolute;
+			transform-origin: 50% 90%;
+		}
+	}
+}

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+	<meta charset="UTF-8">
+	<title>TDF Testing Grounds</title>
+
+	<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" type="text/css" rel="stylesheet"/>
+	<link href="css/testing_grounds.css" type="text/css" rel="stylesheet"/>
+
+	<script src="js/raphael-min.js" type="text/javascript" ></script>
+	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyApm2XaRb1QHTipVIl34Po20Hi6E9I9eAU&libraries=geometry" type="text/javascript" ></script>
+
+	<script	data-main="testing_grounds" src="js/require.js"></script>
+</head>
+<body>
+
+<div class="container-fluid game-container">
+	<div class="row">
+		<div class="col-xs-3">
+			<div class="rider-control">
+				<div class="panel panel-primary">
+					<div class="panel-heading">
+						<div class="dropdown" id="dropdownMenu">
+							<button class="btn btn-default" data-toggle="dropdown">
+								<span id="dropdown-title">Rider</span>
+								<span class="caret"></span>
+							</button>
+							<ul class="dropdown-menu">
+							</ul>
+						</div>
+					</div>
+					<div class="panel-body">
+						<div>
+							<h3><span class="label label-danger">Exertion</span> <span id="lblExertion">0</span></h3>
+						</div>
+						<div>
+							<h3><span class="label label-success">Power</span> <span id="lblPower">0</span></h3>
+						</div>
+						<div>
+							<h3><span class="label label-warning">Speed</span> <span id="lblSpeed">0</span></h3>
+						</div>
+						<div>
+							<h3><span class="label label-primary">Distance</span> <span id="lblDistance">0</span></h3>
+						</div>
+						<div>
+							<h3><span class="label label-info">Gradient</span> <span id="lblGradient">0</span></h3>
+						</div>
+						<input id="distance-setter" type="number" class="form-control" placeholder="Distance">
+					</div>
+					<div class="panel-footer">
+						<div class="elevation-view"></div>
+						<span id="lblTime">0:00</span>
+					</div>
+				</div>
+			</div>
+			<button id="turn">Turn</button>
+			<button id="play">Go</button>
+		</div>
+
+		<div class="col-xs-6">
+			<div id="map-canvas"></div>
+		</div>
+
+		<div class="col-xs-3">
+
+		</div>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,25 @@
+// TODO: draw elevation view with animated bike climbing
+// TODO: refactor elevation drawing code
+// TODO: animate elevation map
+// TODO: adjust power for gradient and muscle contributions
+// TODO: add health measure (for multi-stage races)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// NOTES:
+
+// NOTE: maps from https://www.mapmytracks.com/events/tour-de-france-2015/race/stage-1-utrecht--zlande
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// QUESTIONS:
+
+// Q: How do riders position themselves during the neutralized portion of the race? Is there any jockeying?
+// Q: Where does power for descents come from? At what point is it 100% gravity?
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// DONE:
+
+// DONE: create indicator view for selectable rider
+// DONE: show multiple markers on map

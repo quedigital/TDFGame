@@ -1,8 +1,11 @@
-// TODO: draw elevation view with animated bike climbing
-// TODO: refactor elevation drawing code
-// TODO: animate elevation map
+// TODO: draw elevation points (for debugging)
+// TODO: zoomable elevation view (rider, group, racers, whole course)
+// TODO: elevation view can show all riders (centered on one)
+// TODO: start, end, sprint, mountain points (lunch?)
+// TODO: when calculating speed, use EVERY terrain point between last and current not just the ones we "land" on
 // TODO: adjust power for gradient and muscle contributions
 // TODO: add health measure (for multi-stage races)
+// TODO: begin multiplayer (host & multiple controllers)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -23,3 +26,6 @@
 
 // DONE: create indicator view for selectable rider
 // DONE: show multiple markers on map
+// DONE: draw elevation view with animated bike climbing
+// DONE: animate elevation map
+// DONE: refactor elevation drawing code

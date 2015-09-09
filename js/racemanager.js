@@ -126,5 +126,9 @@ define(["map", "rider"], function (Map, Rider) {
 		return this.map.getElevationAtDistance(distance);
 	};
 
+	RaceManager.prototype.getStageDistance = function () {
+		return this.map.getDistance();
+	}
+
 	return RaceManager;
 });

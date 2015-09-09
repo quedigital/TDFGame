@@ -154,6 +154,10 @@ define(["epoly"], function () {
 			return undefined;
 	};
 
+	Map.prototype.getDistance = function () {
+		return this.distance;
+	};
+
 	return Map;
 
 	function closest(llng, listData) {

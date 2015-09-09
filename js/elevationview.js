@@ -9,11 +9,9 @@ define(["jquery.ui"], function () {
 			this.rider = $("<img>", { class: "rider", src: "graphics/rider.png" });
 			this.interior.append(this.rider);
 
-			this.options.min = 1000;
-			this.options.max = 2000;
-			this.options.map_length = 113000;
+			this.options.sampleRate = 55;   // meters per data point
 
-			this.BUFFER = 200;
+			this.VERTICAL_BUFFER = 200;
 
 			this.setupTerrainView();
 		},
@@ -25,67 +23,84 @@ define(["jquery.ui"], function () {
 			this.total_width = win_width * 5;
 			this.total_height = win_height * 5;
 
-			// THEORY: map viewport always shows 1000 meters
-			// TODO: determine max height needed; ie, steepest section
-
-			this.paper = new Raphael(this.interior[0], this.total_width, Math.floor(this.total_height + this.BUFFER));
+			this.paper = new Raphael(this.interior[0], this.total_width, Math.floor(this.total_height + this.VERTICAL_BUFFER));
 
 			$("svg").css( { position: "absolute", top: 0, left: 0 });
 
 			// 52 x 43
-			this.rider.css({ left: this.interior.width() * .5 - 26, top: this.interior.height() * .5 - 43 });
+			this.rider.css({ left: this.interior.width() * .5 - 26, top: this.interior.height() * .75 - 43 });
 		},
 
 		// THEORY: generate a terrain snapshot of, say, the next 5km and scroll through that
 
 		refresh: function (distance, gradient, options) {
-			var HALF = (this.interior.width() * .5) * this.meters_per_pixel_x;
+			switch (this.options.zoomLevel) {
+				case "race":
+					if (this.lastDistance == undefined) {
+						this.generateSnapshot(distance);
+					}
 
-			var newSnapshot = false;
+					var x = this.getXFromDistance(distance);
+					var y = this.getYFromDistance(distance);
 
-			if (distance - HALF <= this.snapshot_start || distance + HALF >= this.snapshot_end || this.snapshot_end == undefined || this.snapshot_start == undefined) {
-				this.generateSnapshot(distance);
-				newSnapshot = true;
-			}
+					this.rider.css({ left: x - 26, top: y - 21, "z-index": 1000 });
 
-			// move the snapshot so it's centered on the rider
-			var x = this.getSnapshotXFromDistance(distance);
+					break;
 
-			var elev = this.options.raceManager.getElevationAtDistance(distance);
-			var y = this.getSnapshotYFromElevation(elev);
+				case "rider":
+					var HALF = (this.interior.width() * .5) / this.pixels_per_meter_y;
 
-			var duration = undefined;
-			if (options) {
-				duration = 1000 / options.updatesPerSecond;
-			}
+					var newSnapshot = false;
 
-			var degrees = -Math.floor(gradient * 450) * .1;
+					if (distance - HALF <= this.snapshot_start || distance + HALF >= this.snapshot_end || this.snapshot_end == undefined || this.snapshot_start == undefined) {
+						this.generateSnapshot(distance);
+						newSnapshot = true;
+					}
 
-			this.rider.stop().animate({ fakeProperty: degrees }, {
-				step: function (now, fx) {
-					$(this).css("transform", "rotate(" + now + "deg)");
-				},
-				duration: duration
-			}, "linear");
+					// move the snapshot so it's centered on the rider
+					var x = this.getSnapshotXFromDistance(distance);
 
-			if (!newSnapshot) {
-				this.element.find("svg").stop().animate( { left: -x, top: -y }, duration, "linear" );
-			} else {
-				if (this.lastDistance != undefined) {
-					// new snapshot, draw us at our last position
-					var x0 = this.getSnapshotXFromDistance(this.lastDistance);
+					var elev = this.options.raceManager.getElevationAtDistance(distance);
+					var y = this.getSnapshotYFromElevation(elev);
 
-					var elev0 = this.options.raceManager.getElevationAtDistance(this.lastDistance);
-					var y0 = this.getSnapshotYFromElevation(elev0);
+					var duration = undefined;
+					if (options) {
+						duration = 1000 / options.updatesPerSecond;
+					}
 
-					this.element.find("svg").stop().css({left: -x0, top: -y0});
-					this.element.find("svg").animate({left: -x, top: -y}, duration, "linear");
-				} else {
-					this.element.find("svg").stop().css({left: -x, top: -y});
-				}
+					var degrees = -Math.floor(gradient * 450) * .1;
+
+					this.rider.stop().animate({fakeProperty: degrees}, {
+						step: function (now, fx) {
+							$(this).css("transform", "rotate(" + now + "deg)");
+						},
+						duration: duration
+					}, "linear");
+
+					if (!newSnapshot) {
+						this.element.find("svg").stop().animate({left: -x, top: -y}, duration, "linear");
+					} else {
+						if (this.lastDistance != undefined) {
+							// new snapshot, draw us at our last position
+							var x0 = this.getSnapshotXFromDistance(this.lastDistance);
+
+							var elev0 = this.options.raceManager.getElevationAtDistance(this.lastDistance);
+							var y0 = this.getSnapshotYFromElevation(elev0);
+
+							this.element.find("svg").stop().css({left: -x0, top: -y0});
+							this.element.find("svg").animate({left: -x, top: -y}, duration, "linear");
+						} else {
+							this.element.find("svg").stop().css({left: -x, top: -y});
+						}
+					}
+					break;
 			}
 
 			this.lastDistance = distance;
+		},
+
+		getSamplesPerScreen: function () {
+			return Math.ceil(this.zoomWidth / this.options.sampleRate);
 		},
 
 		// draw terrain from distance - 500 to distance + 4500
@@ -93,18 +108,36 @@ define(["jquery.ui"], function () {
 			if (this.elevationPath)
 				this.elevationPath.remove();
 
-			var RANGE = 5000, SAMPLES = 100;    // sample every 50 meters
-			var LEFT = 2500, RIGHT = 2500;
+			var start, end;
+			var SAMPLES;
+			var viewWidth, viewHeight;
+			var bottomY;
+			var marginTop = 0;
 
-			var start = distance - LEFT;
-			var end = distance + RIGHT;
+			switch (this.options.zoomLevel) {
+				case "race":
+					start = 1;
+					end = this.options.raceManager.getStageDistance();
+					this.zoomWidth = end - start;
+					SAMPLES = this.interior.width();
+					viewWidth = this.interior.width();
+					viewHeight = this.interior.height() - 20;
+					marginTop = 20;
+					bottomY = viewHeight + marginTop;
+					break;
 
-			this.meters_per_pixel_y = 2;
-			this.meters_per_pixel_x = RANGE / this.total_width;
+				case "rider":
+					start = distance - 500;
+					end = distance + 500;
+					this.zoomWidth = end - start;
+					SAMPLES = this.zoomWidth / this.options.sampleRate;
+					viewWidth = this.total_width;
+					viewHeight = this.total_height;
+					bottomY = Math.floor(viewHeight) + this.VERTICAL_BUFFER;
+					break;
+			}
 
-			var w = this.interior.width();
-			var h = this.interior.height();
-			var half = this.total_height * .5;
+			this.pixels_per_meter_x = viewWidth / this.zoomWidth;
 
 			var elev0 = undefined;
 
@@ -113,17 +146,17 @@ define(["jquery.ui"], function () {
 
 			var elev_min = undefined, elev_max = undefined;
 
-			var step_size = RANGE / SAMPLES;
+			var meters_per_sample = this.zoomWidth / SAMPLES;
 
 			for (var i = 0; i <= SAMPLES; i++) {
-				var d = start + (i * step_size);
+				var d = start + (i * meters_per_sample);
 				var elev = this.options.raceManager.getElevationAtDistance(d);
 				this.pts[i] = elev;
 				if (elev < elev_min || elev_min == undefined) elev_min = elev;
 				else if (elev > elev_max || elev_max == undefined) elev_max = elev;
 			}
 
-			this.rider_pt = Math.floor(LEFT / step_size);
+			this.rider_pt = Math.floor(500 / meters_per_sample);
 			var elev_current = undefined;
 			while (!elev_current && this.rider_pt < this.pts.length) {
 				elev_current = this.pts[++this.rider_pt];
@@ -131,8 +164,17 @@ define(["jquery.ui"], function () {
 
 			this.elev_min = elev_min;
 
+			switch (this.options.zoomLevel) {
+				case "race":
+					this.pixels_per_meter_y = viewHeight / (elev_max - elev_min);
+					break;
+
+				case "rider":
+					this.pixels_per_meter_y = 4;
+					break;
+			}
+
 			var lastX, lastY;
-			var bottomY = Math.floor(this.total_height) + this.BUFFER;
 
 			var p = "M0," + bottomY;
 
@@ -144,8 +186,8 @@ define(["jquery.ui"], function () {
 				}
 
 				if (elev) {
-					var x = Math.floor((i / SAMPLES) * this.total_width);
-					var y = Math.floor(this.total_height - ((elev - elev_min) / this.meters_per_pixel_y));
+					var x = Math.floor((i / SAMPLES) * viewWidth);
+					var y = Math.floor((marginTop + viewHeight) - (((elev - elev_min) * this.pixels_per_meter_y)));
 
 					if (i == 0) {
 						p += "L" + x + "," + y;
@@ -159,17 +201,17 @@ define(["jquery.ui"], function () {
 				}
 			}
 
-			var x1 = Math.floor(this.total_width);
+			var x1 = Math.floor(viewWidth);
 			p += "L" + x1 + "," + bottomY + "Z";
 
-			this.elevationPath = this.paper.path(p).attr( { stroke: "#0000d0", fill:  "#00a000" });
+			this.elevationPath = this.paper.path(p).attr( { stroke: "#0ADA0A", fill:  "#00a000" });
 
 			this.snapshot_start = start;
 			this.snapshot_end = end;
 		},
 
 		getFirstElevationPoint: function () {
-			var SAMPLES = 100;
+			var SAMPLES = this.getSamplesPerScreen();
 
 			for (var i = 0; i <= SAMPLES; i++) {
 				if (this.pts[i]) return this.pts[i];
@@ -178,20 +220,34 @@ define(["jquery.ui"], function () {
 			return undefined;
 		},
 
+		getXFromDistance: function (distance) {
+			var d = (distance - this.snapshot_start) / this.zoomWidth;
+			return d * this.interior.width();
+		},
+
+		getYFromDistance: function (distance) {
+			var marginTop = 20;
+			var viewHeight = this.interior.height() - 20;
+
+			var elev = this.options.raceManager.getElevationAtDistance(distance);
+
+			var y = Math.floor((marginTop + viewHeight) - (((elev - this.elev_min) * this.pixels_per_meter_y)));
+
+			return y;
+		},
+
 		getSnapshotXFromDistance: function (distance) {
-			var RANGE = 5000, SAMPLES = 100;    // sample every 50 meters
-			var step_size = RANGE / SAMPLES;
-			var LEFT = 500;
+			var SAMPLES = this.getSamplesPerScreen();
 			var d = distance - this.snapshot_start;
-			var x = d / step_size;
+			var x = d / this.options.sampleRate;
 			x = (x / SAMPLES) * this.total_width;
 			x -= this.interior.width() * .5;
 			return x;
 		},
 
 		getSnapshotYFromElevation: function (elev) {
-			var y = this.total_height - ((elev - this.elev_min) / this.meters_per_pixel_y);
-			y -= this.interior.height() * .5;
+			var y = this.total_height - ((elev - this.elev_min) * this.pixels_per_meter_y);
+			y -= this.interior.height() * .75;
 			return y;
 		}
 	});

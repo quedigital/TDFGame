@@ -24,7 +24,7 @@ define(["jquery.ui", "elevationview"], function () {
 				this.element.find("ul").append(el);
 			}
 
-			this.elevation = this.element.find(".elevation-view").ElevationView( { raceManager: this.options.mgr } );
+			this.elevation = this.element.find(".elevation-view").ElevationView( { raceManager: this.options.mgr, zoomLevel: "race" } );
 
 			$(".game-container").on("rider-update", $.proxy(this.onRiderUpdate, this));
 			$("#distance-setter").change($.proxy(this.onSetDistance, this));
@@ -76,6 +76,8 @@ define(["jquery.ui", "elevationview"], function () {
 
 			var time = this.options.mgr.elapsedTime;
 			this.element.find("#lblTime").text(("" + time).toHHMMSS());
+
+			//options = $.extend(options);
 
 			this.elevation.ElevationView("refresh", r.currentDistance, r.currentGradient, options);
 		},

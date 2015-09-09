@@ -30,7 +30,7 @@ define(["jquery", "racemanager", "bootstrap", "ridercontrol"], function ($, Race
 	var playing = false;
 
 	var SECS_PER_TURN = 10;
-	var UPDATES_PER_SECOND = 10;
+	var UPDATES_PER_SECOND = 1;
 
 	$(function () {
 		mgr = new RaceManager({ canvas: "#map-canvas", gpx: "maps/MapMyTrack-Route-Stage-20-Modane-Valfréjus---AlpedHuez.gpx", onMapLoaded: onMapLoaded });

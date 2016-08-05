@@ -4,10 +4,10 @@ var marker;
 requirejs.config({
 	baseUrl: "js/",
 	paths: {
-		"jquery": "jquery-2.1.3.min",
-		"jquery.ui": "jquery-ui.min",
-		"bootstrap": "bootstrap.min",
-		"epoly": "v3_epoly",
+		"jquery": "../libs/jquery-2.1.3.min",
+		"jquery.ui": "../libs/jquery-ui.min",
+		"bootstrap": "../libs/bootstrap.min",
+		"epoly": "../libs/v3_epoly",
 		/*"raphael": "raphael-min"*/
 	},
 	shim: {

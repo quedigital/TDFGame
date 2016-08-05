@@ -1,0 +1,124 @@
+html, body {
+	margin: 0;
+	font-family: sans-serif;
+}
+
+div.rider {
+	span.title {
+		display: inline-block;
+		width: 100px;
+	}
+
+	span.distance {
+		margin-left: 1em;
+	}
+
+	span.time {
+		margin-left: 1em;
+		color: green;
+	}
+}
+
+#buttons {
+	margin-top: 1em;
+}
+
+.gui {
+	width: 200px;
+	padding: 10px;
+	border: 2px solid black;
+	border-radius: 10px;
+	margin: 25px;
+	box-sizing: content-box;
+	background-color: #e0f0e4;
+
+	h4 {
+		margin: 0 0 .5em 0;
+		text-align: center;
+	}
+
+	.stats {
+		font-size: 10px;
+		padding: 5px;
+		margin: 5px 0;
+		border: 1px solid black;
+
+		p {
+			margin: 0;
+		}
+	}
+
+	.gauge {
+		width: 100%;
+		height: 20px;
+
+		.label {
+			font-size: 10px;
+			color: black;
+			margin-left: 10px;
+		}
+
+		&:before {
+			display: inline;
+			color: white;
+			font-size: 10px;
+		}
+
+		&.maxPower {
+			background-color: orange;
+
+			&:before {
+				content: "maxPower";
+			}
+		}
+
+		&.effort {
+			background-color: blue;
+
+			.label {
+				color: white;
+			}
+
+			&:before {
+				content: "effort";
+			}
+		}
+
+		&.power {
+			background-color: green;
+
+			&:before {
+				content: "power";
+			}
+		}
+
+		&.fuel {
+			background-color: orange;
+
+			&:before {
+				content: "fuel";
+			}
+		}
+
+		&.distance {
+			background-color: #818990;
+
+			&:before {
+				content: "distance";
+			}
+		}
+	}
+}
+
+.race-chart {
+	border-collapse: collapse;
+	margin: 10px;
+
+	tr, td {
+		border: 1px solid black;
+	}
+
+	thead tr:first-child td {
+		text-align: center;
+	}
+}

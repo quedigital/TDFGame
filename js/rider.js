@@ -1,5 +1,4 @@
 define(["Formation"], function (Formation) {
-
 	// from http://stackoverflow.com/questions/27176423/function-to-solve-cubic-equation-analytically
 	function cuberoot(x) {
 		var y = Math.pow(Math.abs(x), 1/3);

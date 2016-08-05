@@ -1,31 +1,37 @@
-// TODO: draw elevation points (for debugging)
-// TODO: zoomable elevation view (rider, group, racers, whole course)
-// TODO: elevation view can show all riders (centered on one)
-// TODO: start, end, sprint, mountain points (lunch?)
-// TODO: when calculating speed, use EVERY terrain point between last and current not just the ones we "land" on
-// TODO: adjust power for gradient and muscle contributions
-// TODO: add health measure (for multi-stage races)
-// TODO: begin multiplayer (host & multiple controllers)
+// TODO: come up with a starting fuel tank number
+// TODO: add a debug rider UI to the test engine
+// TODO: group tests
+// TODO: distance from power
+// TODO: take gradient, muscle fibers, fatigue into account for power
+// TODO: fatigue reduces power (so it doesn't go up forever)
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// NOTES:
+IDEAS:
 
-// NOTE: maps from https://www.mapmytracks.com/events/tour-de-france-2015/race/stage-1-utrecht--zlande
+course is measured in tenths of kilometers (ie, 150 = 15 km = 15000 meters)
+time is measured in 10-second intervals (ie, 90 ticks = 900 seconds = 15 minutes)
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+max power * effort = desired power
+fatigue (fuel remaining) affects power output
+acceleration determines how fast your power ramps up
 
-// QUESTIONS:
+once you're out of fuel, your power drops to the "recover rate" level
 
-// Q: How do riders position themselves during the neutralized portion of the race? Is there any jockeying?
-// Q: Where does power for descents come from? At what point is it 100% gravity?
+sprinters vs. climbers?
+sprinter = high max power, slow recovery
+climber = lower max power, higher recovery
+tt = high-ish max power, good recovery
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+overnight recovery?
+
+SCENARIOS:
+
+flat time trial: for TT victors
+sprint finish
+straight climb
+rolling course
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // DONE:
-
-// DONE: create indicator view for selectable rider
-// DONE: show multiple markers on map
-// DONE: draw elevation view with animated bike climbing
-// DONE: animate elevation map
-// DONE: refactor elevation drawing code

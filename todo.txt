@@ -1,16 +1,13 @@
-// TODO: descending speed accurate?
 // TODO: descending ability?
-// TODO: rolling course tests
 // TODO: crashing on curves
 // TODO: fatigue? bonking penalty?
 // TODO: team with most riders "pulling" in a group get to control it (ie, set its pace)
 // TODO: come up with a starting fuel tank number
+// TODO: rider modeling/visualizer
 // TODO: add a debug rider UI to the test engine
 // TODO: group tests
 // TODO: time trials!
 // TODO: helicopter view with current, live standings
-// TODO: take gradient, muscle fibers, fatigue into account for power
-// TODO: fatigue reduces power (so it doesn't go up forever)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -45,3 +42,6 @@ rolling course
 // DONE: power curves for each rider
 // DONE: climbing ability versus flat ability
 // DONE: distance from power
+// DONE: descending speed accurate? [seems close]
+// DONE: downhill shouldn't use as much energy [works as part of the standard power equation; just don't set effort to 0]
+// DONE: rolling course tests

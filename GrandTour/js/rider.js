@@ -191,7 +191,7 @@ define(["d3"], function (d3) {
 				//this.currentPower *= fatigue;
 
 			} else if (this.currentPower > desired) {
-				// TODO: coasting?
+				// TODO: decelerating is immediate?
 				this.currentPower = desired;
 			}
 		},
@@ -302,6 +302,8 @@ define(["d3"], function (d3) {
 			} else {
 				this.effort = val;
 			}
+
+			if (this.effort <= 0) this.effort = .01;
 		},
 
 		setGroupLeader: function (rider) {

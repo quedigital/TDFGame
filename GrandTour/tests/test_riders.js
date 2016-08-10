@@ -31,17 +31,17 @@ function makeBasicRiders (obj) {
 		acceleration: 100,
 		recovery: 305,
 		weight: 90,
-		flatAbility: .7,
+		flatAbility: .75,
 		climbingAbility: .3
 	});
 
 	var climber = new Rider({
 		name: "Climber",
 		maxPower: 1200,
-		acceleration: 50,
+		acceleration: 30,
 		recovery: 305,
 		weight: 60,
-		flatAbility: .75,
+		flatAbility: .7,
 		climbingAbility: .6
 	});
 
@@ -61,7 +61,7 @@ describe("Grand Tour", function () {
 		});
 	});
 
-	describe("Flat 15 km stage", function () {
+	describe("Flat Stage", function () {
 		var flat_course, tt, sprinter;
 
 		before(function () {
@@ -132,7 +132,7 @@ describe("Grand Tour", function () {
 		});
 	});
 
-	describe("Mountain stage", function () {
+	describe("Mountain Stage", function () {
 		before(function () {
 			var rm = new RaceManager();
 			var mtn_rm = new RaceManager();
@@ -146,6 +146,7 @@ describe("Grand Tour", function () {
 
 			this.mtn_tt = $.extend({}, this.tt);
 			mtn_rm.addRider(this.mtn_tt);
+			mtn_rm.addRider(this.climber);
 
 			rm.setMap(flat_course);
 			mtn_rm.setMap(mtn_course);
@@ -161,9 +162,13 @@ describe("Grand Tour", function () {
 		it("Mountain TT average speed is around 12 km/h", function () {
 			this.mtn_tt.getAverageSpeed().should.be.within(10, 15);
 		});
+
+		it("Climber wins mountain stage by 3 or 4 minutes", function () {
+			expect(this.mtn_tt.getTimeInSeconds() - this.climber.getTimeInSeconds()).to.be.within(3 * 60, 4 * 60);
+		});
 	});
 
-	describe("Power curves", function () {
+	describe("Power Curves", function () {
 		before(function () {
 			var rm = new RaceManager();
 
@@ -195,13 +200,12 @@ describe("Grand Tour", function () {
 		});
 
 		it("Riders have different power curves, generating different power", function () {
-			/*
-			console.log(this.sprinter.getMultiplierForPower(1440));
-			console.log(this.sprinter.getMultiplierForPower(690));
-			console.log(this.sprinter.getMultiplierForPower(456));
-			console.log(this.sprinter.getMultiplierForPower(384));
-			console.log(this.sprinter.getMultiplierForPower(300));
-			*/
+			this.sprinter.getMultiplierForPower(1440).should.be.within(18, 22);
+			this.sprinter.getMultiplierForPower(690).should.be.within(7, 8);
+			this.sprinter.getMultiplierForPower(456).should.be.within(3, 4);
+			this.sprinter.getMultiplierForPower(384).should.be.within(2, 3);
+			this.sprinter.getMultiplierForPower(300).should.be.within(.9, 1.1);
+
 			this.tt.getPowerCurve().should.not.eql(this.custom_tt.getPowerCurve());
 			this.tt.getMultiplierForPower(450).should.be.above(this.custom_tt.getMultiplierForPower(450));
 		});
@@ -212,7 +216,7 @@ describe("Grand Tour", function () {
 		});
 	});
 
-	describe("Climbers", function () {
+	describe("Climbing Ability", function () {
 		before(function () {
 			var rm = new RaceManager();
 
@@ -228,7 +232,7 @@ describe("Grand Tour", function () {
 				acceleration: 50,
 				recovery: 305,
 				weight: 50, // vs. 60
-				flatAbility: .75,
+				flatAbility: .7,
 				climbingAbility: .6
 			});
 
@@ -238,7 +242,7 @@ describe("Grand Tour", function () {
 				acceleration: 50,
 				recovery: 305,
 				weight: 60,
-				flatAbility: .75,
+				flatAbility: .7,
 				climbingAbility: .5 // vs. .6
 			});
 
@@ -254,8 +258,91 @@ describe("Grand Tour", function () {
 			(this.climber.getTimeInSeconds() - this.lite_climber.getTimeInSeconds()).should.be.within(300, 400);
 		});
 
-		it("Poor Climber is 30 to 40 seconds slower than Standard Climber", function () {
-			(this.poor_climber.getTimeInSeconds() - this.climber.getTimeInSeconds()).should.be.within(30, 40);
+		it("Poor Climber is 55 to 60 seconds slower than Standard Climber", function () {
+			(this.poor_climber.getTimeInSeconds() - this.climber.getTimeInSeconds()).should.be.within(55, 60);
+		});
+	});
+
+	describe("Downhill", function () {
+		before(function () {
+			var rm = new RaceManager();
+			var rm2 = new RaceManager();
+
+			var flat_course = new Map({gradients: [[0, 0], [150, 0]]});         // 15 km flat
+			var downhill_course = new Map({gradients: [[0,-.12], [150,-.12]]}); // 15 km @ -12%
+
+			rm.setMap(flat_course);
+			rm2.setMap(downhill_course);
+
+			this.dh = {};
+
+			makeBasicRiders(this);
+			makeBasicRiders(this.dh);
+
+			this.tt.setEffort(1);
+			this.dh.tt.setEffort(0.01);
+
+			rm.addRider(this.tt);
+			rm2.addRider(this.dh.tt);
+
+			rm.runToFinish();
+			rm2.runToFinish();
+		});
+
+		it("Coasting downhill 15km is 8-12 minutes faster (80-90 km/h) than 15km flat", function () {
+			(this.tt.getTimeInSeconds() - this.dh.tt.getTimeInSeconds()).should.be.within(8 * 60, 12 * 60);
+			this.dh.tt.getAverageSpeed().should.be.within(75, 85);
+		});
+
+		it("Coasting downhill uses hardly any power", function () {
+			this.tt.getAveragePower().should.be.within(300, 400);
+			this.dh.tt.getAveragePower().should.be.within(1, 20);
+		});
+	});
+
+	describe("Rolling Course", function () {
+		before(function () {
+			var rm = new RaceManager();
+
+			var gradient = 0.08;
+
+			var rolling_course = new Map({gradients: [
+				[0, 0],
+				[200, 0],
+				[50, gradient],
+				[50,0],
+				[50, -gradient],
+				[200, 0],
+				[50, gradient],
+				[50,0],
+				[50, -gradient],
+				[200, 0],
+				[50, gradient],
+				[50,0],
+				[50, -gradient],
+				[200, 0]
+			]});         // 125 km with 3 hills
+
+			rm.setMap(rolling_course);
+
+			makeBasicRiders(this);
+
+			rm.addRider(this.tt);
+			rm.addRider(this.climber);
+			rm.addRider(this.sprinter);
+
+			rm.runToFinish();
+
+			this.rm = rm;
+		});
+
+		it("Course is 125km", function () {
+			this.rm.getStageDistance().should.be.equal(1250);
+		});
+
+		it("Finish order for rolling 8% course: TT, Climber, Sprinter", function () {
+			this.tt.getTimeInSeconds().should.be.below(this.climber.getTimeInSeconds());
+			this.climber.getTimeInSeconds().should.be.below(this.sprinter.getTimeInSeconds());
 		});
 	});
 

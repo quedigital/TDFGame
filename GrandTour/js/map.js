@@ -5,9 +5,12 @@ define([], function () {
 
 	Map.prototype = {
 		getTotalDistance: function () {
-			var n = this.options.gradients.length;
+			var total = 0;
+			for (var i = 0; i < this.options.gradients.length; i++) {
+				total += this.options.gradients[i][0];
+			}
 
-			return this.options.gradients[n - 1][0];
+			return total;
 		},
 
 		getGradientAtDistance: function (distance) {

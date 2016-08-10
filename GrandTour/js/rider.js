@@ -78,12 +78,26 @@ define(["d3"], function (d3) {
 		return roots;
 	}
 
+	String.prototype.toHHMMSS = function () {
+		var sec_num = parseInt(this, 10); // don't forget the second param
+		var hours   = Math.floor(sec_num / 3600);
+		var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
+		var seconds = sec_num - (hours * 3600) - (minutes * 60);
+
+		if (hours   < 10) {hours   = "0"+hours;}
+		if (minutes < 10) {minutes = "0"+minutes;}
+		if (seconds < 10) {seconds = "0"+seconds;}
+		return hours+':'+minutes+':'+seconds;
+	};
+
 	function Rider (options) {
 		this.options = options;
 
-		this.options.maxPower = 1600;
+		if (this.options.powerCurve == undefined) {
+			this.options.powerCurve = [-3.999958, 1.000008, 177029800, 2950797];
+		}
 
-		this.effort = this.options.effort ? this.options.effort : .5;
+		this.effort = this.options.effort ? this.options.effort : 1;
 
 		this.reset();
 	}
@@ -96,7 +110,7 @@ define(["d3"], function (d3) {
 			this.currentPower = 0;
 			this.totalPowerSpent = 0;
 
-			this.maxfuel = this.fueltank = 21000;//this.options.basePower * 6 * 60;  // one-hour average power
+			this.maxfuel = this.fueltank = 132000;  // TODO: starting watt-hours
 
 			this.groupLeader = undefined;
 		},
@@ -107,6 +121,14 @@ define(["d3"], function (d3) {
 
 		getTime: function () {
 			return this.time;
+		},
+
+		getTimeInSeconds: function () {
+			return this.time * 10;
+		},
+
+		getTimeAsString: function () {
+			return String(this.getTimeInSeconds()).toHHMMSS();
 		},
 
 		isFinished: function () {
@@ -121,22 +143,22 @@ define(["d3"], function (d3) {
 			return (this.groupLeader != undefined && this.groupLeader != this);
 		},
 
-		powerStep: function (power, gradient) {
+		powerStep: function (power, gradient, distanceToFinish) {
 			this.accelerateTo(power);
 
-			this.updateDistance(gradient);
+			var interval = this.updateDistance(gradient, distanceToFinish);
 
 			this.updateFuel();
 
 			this.totalPowerSpent += this.currentPower;
 
-			this.time++;
+			this.time += interval;
 		},
 
-		step: function (gradient) {
+		step: function (gradient, distanceToFinish) {
 			var desiredPower = this.options.maxPower * this.effort;
 
-			this.powerStep(desiredPower, gradient);
+			this.powerStep(desiredPower, gradient, distanceToFinish);
 		},
 
 		stepWithLeader: function (gradient) {
@@ -162,7 +184,7 @@ define(["d3"], function (d3) {
 			if (this.currentPower <= desired) {
 				var attemptedPower = Math.min(this.currentPower + this.options.acceleration, desired);
 
-				this.currentPower = Math.min(Math.max(this.options.basePower, this.fueltank), attemptedPower);
+				this.currentPower = Math.min(Math.max(0, this.fueltank), attemptedPower);
 
 				// THEORY: the less fuel you have, the slower you go (with exponential out easing)
 				//var fatigue = d3.easeExpOut(this.getFuelPercent());
@@ -197,10 +219,18 @@ define(["d3"], function (d3) {
 
 			var roots = solveCubic(a, 0, c1 + c2, -power);
 
-			return roots[0] / 10;
+			var rise = Math.sin(angle), run = Math.cos(angle);
+			var dist = roots[0] / 10;
+
+			var fast = dist * run * this.options.flatAbility;
+			var slow = dist * rise * this.options.climbingAbility;
+
+			return fast + slow;
 		},
 
-		updateDistance: function (gradient) {
+		updateDistance: function (gradient, distanceToFinish) {
+			var timeInterval = 1;
+
 			if (this.isInGroup()) {
 				// TODO: this shouldn't be automatic
 				this.distance = this.groupLeader.getDistance();
@@ -208,17 +238,30 @@ define(["d3"], function (d3) {
 				// distance takes gradient, muscle fibers, weight into account
 				var distanceCovered = this.getDistanceFromPower(this.currentPower, gradient);
 
-				this.distance += distanceCovered;
+				if (distanceCovered > distanceToFinish) {
+					this.distance += distanceToFinish;
+					timeInterval = distanceToFinish / distanceCovered;
+				} else
+					this.distance += distanceCovered;
 			}
+
+			return timeInterval;
+		},
+
+		getMultiplierForPower: function (power) {
+			//return Math.max(1, 2950797 + (-3.999958 - 2950797)/(1 + Math.pow(power / 177029800, 1.000008)));
+
+			var a = this.options.powerCurve[0], b = this.options.powerCurve[1], c = this.options.powerCurve[2], d = this.options.powerCurve[3];
+
+			return Math.max(1, d + (a - d) / (1 + Math.pow(power / c, b)));
 		},
 
 		updateFuel: function () {
-			var multiplier = Math.max(0, 1850683 + (-4.99992 - 1850683)/(1 + Math.pow(this.currentPower / 111022600, 1.000014)));
-			multiplier += 1;
+			var multiplier = this.getMultiplierForPower(this.currentPower);
 
-			var powerDelta = Math.max(0, this.currentPower - this.options.basePower);
+			var powerDelta = Math.max(0, this.currentPower) * multiplier;
 
-			this.fueltank -= powerDelta * multiplier;
+			this.fueltank = Math.max(0, this.fueltank - powerDelta);
 
 			this.fueltank += this.options.recovery;
 		},
@@ -253,7 +296,12 @@ define(["d3"], function (d3) {
 		},
 
 		setEffort: function (val) {
-			this.effort = val;
+			if (val instanceof Object) {
+				if (val.power)
+					this.effort = val.power / this.options.maxPower;
+			} else {
+				this.effort = val;
+			}
 		},
 
 		setGroupLeader: function (rider) {
@@ -272,6 +320,16 @@ define(["d3"], function (d3) {
 
 		getAveragePower: function () {
 			return this.totalPowerSpent / this.time;
+		},
+
+		setPowerCurve: function () {
+			for (var i = 0; i < arguments.length; i++) {
+				this.options.powerCurve[i] = arguments[i];
+			}
+		},
+
+		getPowerCurve: function () {
+			return this.options.powerCurve;
 		}
 	};
 

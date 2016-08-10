@@ -30,38 +30,57 @@ define(["jquery", "racemanager", "rider", "map"], function ($, RaceManager, Ride
 		var mtn_mgr = new RaceManager();
 		var hill_mgr = new RaceManager();
 
-		var flat_course = new Map( { gradients: [ [0, 0], [150, 0] ] } );
-		var mtn_course = new Map( { gradients: [ [0,.12], [20,.12] ] } );
+		var flat_course = new Map( { gradients: [ [0, 0], [300, 0] ] } );
+		var mtn_course = new Map( { gradients: [ [0,.12], [80,.12] ] } );
 		var hill_course = new Map( { gradients: [ [0, 0], [40,.08], [48,0] ] } );
 
-		tt = new Rider({
+		var tt = new Rider({
 			name: "Time-trialer",
-			basePower: 305,
+			maxPower: 1600,
+			powerCurve: [-3.999958, 1.000008, 177029800, 2950797],
 			acceleration: 50,
-			recovery: 0,
+			recovery: 305,
 			weight: 70,
-			fastTwitch: .8,
-			slowTwitch: .2,
+			flatAbility: .8,
+			climbingAbility: .2,
 			effort: 1
 		});
-		sprinter = new Rider({
+
+		var custom_tt = new Rider({
+			name: "Custom Time-trialer",
+			maxPower: 1600,
+			powerCurve: [.3444671, 3.500777, 863.0446, 27.94112],
+			acceleration: 50,
+			recovery: 305,
+			weight: 70,
+			flatAbility: .8,
+			climbingAbility: .2,
+			effort: 1
+		});
+
+		var sprinter = new Rider({
 			name: "Sprinter",
-			basePower: 305,
-			acceleration: 600,
-			recovery: 120,
+			maxPower: 1600,
+			powerCurve: [-3.999958, 1.000008, 177029800, 2950797],
+			acceleration: 1400,
+			recovery: 305,
 			weight: 90,
-			fastTwitch: .7,
-			slowTwitch: .3,
+			flatAbility: .7,
+			climbingAbility: .3,
 			effort: 1
 		});
 
 		var rider1 = tt;
-		var rider2 = sprinter;
+		var rider2 = custom_tt;
 
 		flat_mgr.addRider(rider1, "#tt-flat-gui");
 		flat_mgr.addRider(rider2, "#sagan-flat-gui");
 
-		flat_mgr.setMap(flat_course);
+		//flat_mgr.setMap(flat_course);
+		flat_mgr.setMap(mtn_course);
+
+		rider1.setEffort( { power: 450 } );
+		rider2.setEffort( { power: 450 } );
 
 		$("#go").click(onClickGo);
 		$("#stop").click(onClickStop);

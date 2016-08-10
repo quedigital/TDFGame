@@ -20,6 +20,15 @@ define(["underscore"], function (_) {
 			}
 		},
 
+		removeRider: function (rider) {
+			for (var i = 0; i < this.riders; i++) {
+				if (this.riders[i].rider == rider) {
+					this.riders.splice(i, 1);
+					break;
+				}
+			}
+		},
+
 		setMap: function (map) {
 			this.map = map;
 		},
@@ -60,11 +69,12 @@ define(["underscore"], function (_) {
 			_.each(this.riders, function (riderObj, index) {
 				var rider = riderObj.rider;
 				var d = rider.getDistance();
+				var distanceToFinish = thisMapDistance - d;
 				var map = me.map;
 				var gradient = map.getGradientAtDistance(d);
 
 				if (!rider.isFinished() && !rider.isInGroup()) {
-					rider.step(gradient);
+					rider.step(gradient, distanceToFinish);
 
 					if (rider.getDistance() >= thisMapDistance) {
 						rider.setFinished(true);
@@ -148,6 +158,8 @@ define(["underscore"], function (_) {
 		},
 
 		updateGUI: function (rider, gui) {
+			$(gui).find("h4").text(rider.options.name);
+
 			var stats = $(gui).find(".stats");
 			if (stats) {
 				var p = $("<p>", { text: "maxPower: " + rider.getMaxPower() });

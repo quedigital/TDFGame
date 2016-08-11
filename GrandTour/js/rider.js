@@ -109,8 +109,12 @@ define(["d3"], function (d3) {
 			this.time = 0;
 			this.currentPower = 0;
 			this.totalPowerSpent = 0;
+			this.penalty = 0;
+			this.penaltyCount = 0;
 
-			this.maxfuel = this.fueltank = 132000;  // TODO: starting watt-hours
+			this.recoveryMultiplier = this.getMultiplierForPower(this.options.recovery);
+
+			this.maxfuel = this.fueltank = this.options.recovery * this.recoveryMultiplier * 20 * 6;      // 20 minutes (FTP)?
 
 			this.groupLeader = undefined;
 		},
@@ -156,7 +160,7 @@ define(["d3"], function (d3) {
 		},
 
 		step: function (gradient, distanceToFinish) {
-			var desiredPower = this.options.maxPower * this.effort;
+			var desiredPower = this.options.maxPower * this.effort * (1.0 - this.penalty);
 
 			this.powerStep(desiredPower, gradient, distanceToFinish);
 		},
@@ -185,6 +189,18 @@ define(["d3"], function (d3) {
 				var attemptedPower = Math.min(this.currentPower + this.options.acceleration, desired);
 
 				this.currentPower = Math.min(Math.max(0, this.fueltank), attemptedPower);
+
+				if (this.fueltank < 0) {
+					//console.log(this.time);
+					//debugger;
+				}
+				/*
+				if (this.fueltank < desired) {
+					this.takePenalty();
+				} else {
+					this.recoverPenalty();
+				}
+				*/
 
 				// THEORY: the less fuel you have, the slower you go (with exponential out easing)
 				//var fatigue = d3.easeExpOut(this.getFuelPercent());
@@ -219,10 +235,11 @@ define(["d3"], function (d3) {
 
 			var roots = solveCubic(a, 0, c1 + c2, -power);
 
-			var rise = Math.sin(angle), run = Math.cos(angle);
+			// NOTE: scaled gradient to make climbing ability more pronounced
+			var rise = gradient * 5, run = Math.cos(angle);
 			var dist = roots[0] / 10;
 
-			var fast = dist * run * this.options.flatAbility;
+			var fast = dist * run * (.5 + .5 * this.options.flatAbility);
 			var slow = dist * rise * this.options.climbingAbility;
 
 			return fast + slow;
@@ -234,6 +251,7 @@ define(["d3"], function (d3) {
 			if (this.isInGroup()) {
 				// TODO: this shouldn't be automatic
 				this.distance = this.groupLeader.getDistance();
+				timeInterval = this.groupLeader.timeInterval;
 			} else {
 				// distance takes gradient, muscle fibers, weight into account
 				var distanceCovered = this.getDistanceFromPower(this.currentPower, gradient);
@@ -243,6 +261,8 @@ define(["d3"], function (d3) {
 					timeInterval = distanceToFinish / distanceCovered;
 				} else
 					this.distance += distanceCovered;
+
+				this.timeInterval = timeInterval;
 			}
 
 			return timeInterval;
@@ -261,9 +281,13 @@ define(["d3"], function (d3) {
 
 			var powerDelta = Math.max(0, this.currentPower) * multiplier;
 
-			this.fueltank = Math.max(0, this.fueltank - powerDelta);
+			this.fueltank -= powerDelta;
 
-			this.fueltank += this.options.recovery;
+			//this.fueltank = Math.max(0, this.fueltank - powerDelta);
+
+			this.fueltank += this.options.recovery * this.recoveryMultiplier;
+
+			this.fueltank = Math.min(this.fueltank, this.maxfuel);
 		},
 
 		getMaxPower: function () {
@@ -332,6 +356,31 @@ define(["d3"], function (d3) {
 
 		getPowerCurve: function () {
 			return this.options.powerCurve;
+		},
+
+		refuel: function (opts) {
+			if (opts.percent) {
+				this.fueltank = this.maxfuel * (opts.percent / 100);
+			} else if (opts.value) {
+				this.fueltank = opts.value;
+			}
+		},
+
+		takePenalty: function () {
+			this.penalty = 1.0;
+			this.penaltyCount++;
+		},
+
+		isInPenalty: function () {
+			return this.penalty > 0;
+		},
+
+		recoverPenalty: function () {
+			this.penalty = Math.max(0, this.penalty - 0.025);      // TODO: bonk recovery
+		},
+
+		getPenaltyCount: function () {
+			return this.penaltyCount;
 		}
 	};
 

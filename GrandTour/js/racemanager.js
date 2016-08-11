@@ -211,17 +211,25 @@ define(["underscore"], function (_) {
 			} while (!finished);
 		},
 
-		runToMeters: function (dist) {
-			if (dist < 0) {
-				var target = this.getStageDistance() + (dist / 100);
+		runTo: function (opts) {
+			var target;
 
-				do {
-					this.doStep({ nogui: true });
-
-					var leader = this.getLeadingRider();
-					if (leader) lead = leader.getDistance();
-				} while (leader != undefined && lead < target)
+			if (opts.meters) {
+				var dist = opts.meters;
+				if (dist < 0)
+					target = this.getStageDistance() + (dist / 100);
+				else
+					target = dist / 100;
+			} else if (opts.percent) {
+				target = this.getStageDistance() * (opts.percent / 100);
 			}
+
+			do {
+				this.doStep({nogui: true});
+
+				var leader = this.getLeadingRider();
+				if (leader) lead = leader.getDistance();
+			} while (leader != undefined && lead < target)
 		},
 
 		makeGroup: function (riderArray) {

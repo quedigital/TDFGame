@@ -1,4 +1,7 @@
+// TODO: burst energy vs. overall energy?
 // TODO: descending ability?
+// TODO: bonk recovery
+// TODO: sprinting power may need to be re-thought since the step size is 10 seconds (that's too long to be considered "accelerating" to 1600 watts if that only lasts 2 seconds)
 // TODO: crashing on curves
 // TODO: fatigue? bonking penalty?
 // TODO: team with most riders "pulling" in a group get to control it (ie, set its pace)
@@ -35,6 +38,8 @@ flat time trial: for TT victors
 sprint finish
 straight climb
 rolling course
+
+"To win the Tour de France you need to be able to hold 5.9 to 6.0 watts per kg for 30 to 45 minutes at a time, 3 to 4 times over the course of a 5 to 6 hour day in the mountains." -- cyclingtips.com
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

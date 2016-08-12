@@ -217,9 +217,9 @@ define(["underscore"], function (_) {
 			if (opts.meters) {
 				var dist = opts.meters;
 				if (dist < 0)
-					target = this.getStageDistance() + (dist / 100);
+					target = this.getStageDistance() + (dist / 1000);
 				else
-					target = dist / 100;
+					target = dist / 1000;
 			} else if (opts.percent) {
 				target = this.getStageDistance() * (opts.percent / 100);
 			}

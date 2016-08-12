@@ -97,6 +97,11 @@ define(["d3"], function (d3) {
 			this.options.powerCurve = [-3.999958, 1.000008, 177029800, 2950797];
 		}
 
+		if (this.options.ftpPower == undefined) {
+			this.options.ftpPower = 384;
+			console.log("yep");
+		}
+
 		this.effort = this.options.effort ? this.options.effort : 1;
 
 		this.reset();
@@ -108,13 +113,19 @@ define(["d3"], function (d3) {
 			this.finished = false;
 			this.time = 0;
 			this.currentPower = 0;
+			this.currentSpeed = 0;
 			this.totalPowerSpent = 0;
 			this.penalty = 0;
 			this.penaltyCount = 0;
 
 			this.recoveryMultiplier = this.getMultiplierForPower(this.options.recovery);
 
-			this.maxfuel = this.fueltank = this.options.recovery * this.recoveryMultiplier * 20 * 6;      // 20 minutes (FTP)?
+//			this.maxfuel = this.fueltank = this.options.recovery * this.recoveryMultiplier * 2 * 60;      // 20 minutes (FTP)?
+
+			var ftp = this.options.ftpPower * this.getMultiplierForPower(this.options.ftpPower) * 17 * 60;
+			var recover = this.options.recovery * this.getMultiplierForPower(this.options.recovery) * 17 * 60;
+
+			this.maxfuel = this.fueltank = ftp - recover;
 
 			this.groupLeader = undefined;
 		},
@@ -128,11 +139,15 @@ define(["d3"], function (d3) {
 		},
 
 		getTimeInSeconds: function () {
-			return this.time * 10;
+			return this.time;
 		},
 
 		getTimeAsString: function () {
 			return String(this.getTimeInSeconds()).toHHMMSS();
+		},
+
+		getCurrentSpeed: function () {
+			return this.currentSpeed * 3600;
 		},
 
 		isFinished: function () {
@@ -157,8 +172,13 @@ define(["d3"], function (d3) {
 			this.totalPowerSpent += this.currentPower;
 
 			this.time += interval;
+
+			if (this.options.name == "Bob") {
+				console.log(this.currentPower + " => " + this.getCurrentSpeed() + " - " + this.getDistance() + " : " + this.getTimeAsString());
+			}
 		},
 
+		// step 1 second
 		step: function (gradient, distanceToFinish) {
 			var desiredPower = this.options.maxPower * this.effort * (1.0 - this.penalty);
 
@@ -190,10 +210,6 @@ define(["d3"], function (d3) {
 
 				this.currentPower = Math.min(Math.max(0, this.fueltank), attemptedPower);
 
-				if (this.fueltank < 0) {
-					//console.log(this.time);
-					//debugger;
-				}
 				/*
 				if (this.fueltank < desired) {
 					this.takePenalty();
@@ -212,7 +228,7 @@ define(["d3"], function (d3) {
 			}
 		},
 
-		getDistanceFromPower: function (power, gradient) {
+		getSpeedFromPower: function (power, gradient) {
 			var angle = 0;
 
 			if (gradient != 0)
@@ -235,14 +251,14 @@ define(["d3"], function (d3) {
 
 			var roots = solveCubic(a, 0, c1 + c2, -power);
 
-			// NOTE: scaled gradient to make climbing ability more pronounced
+			// NOTE: scaled gradient to make climbing "ability" more pronounced
 			var rise = gradient * 5, run = Math.cos(angle);
-			var dist = roots[0] / 10;
+			var dist = roots[0] / 1000;
 
-			var fast = dist * run * (.5 + .5 * this.options.flatAbility);
-			var slow = dist * rise * this.options.climbingAbility;
+			var flat = dist * run * (.5 + .5 * this.options.flatAbility);
+			var climb = dist * rise * this.options.climbingAbility;
 
-			return fast + slow;
+			return flat + climb;
 		},
 
 		updateDistance: function (gradient, distanceToFinish) {
@@ -251,19 +267,27 @@ define(["d3"], function (d3) {
 			if (this.isInGroup()) {
 				// TODO: this shouldn't be automatic
 				this.distance = this.groupLeader.getDistance();
+
+				this.currentSpeed = this.groupLeader.currentSpeed;
+
 				timeInterval = this.groupLeader.timeInterval;
 			} else {
 				// distance takes gradient, muscle fibers, weight into account
-				var distanceCovered = this.getDistanceFromPower(this.currentPower, gradient);
+				var speed = this.getSpeedFromPower(this.currentPower, gradient);
 
-				if (distanceCovered > distanceToFinish) {
+				// average with last speed?
+				var actual_speed = (speed + this.currentSpeed) * .5;
+
+				if (actual_speed > distanceToFinish) {
 					this.distance += distanceToFinish;
-					timeInterval = distanceToFinish / distanceCovered;
+					timeInterval = distanceToFinish / actual_speed;
 				} else
-					this.distance += distanceCovered;
+					this.distance += actual_speed;
 
-				this.timeInterval = timeInterval;
+				this.currentSpeed = actual_speed;
 			}
+
+			this.timeInterval = timeInterval;
 
 			return timeInterval;
 		},
@@ -280,6 +304,12 @@ define(["d3"], function (d3) {
 			var multiplier = this.getMultiplierForPower(this.currentPower);
 
 			var powerDelta = Math.max(0, this.currentPower) * multiplier;
+
+			if (this.fueltank < powerDelta) {
+				if (this.options.name == "Bob") {
+					console.log("out @ " + this.getTimeAsString());
+				}
+			}
 
 			this.fueltank -= powerDelta;
 
@@ -311,7 +341,7 @@ define(["d3"], function (d3) {
 		},
 
 		getFuelPercent: function () {
-			return this.fueltank / this.maxfuel;
+			return (this.fueltank / this.maxfuel) * 100;
 		},
 
 		deltaEffort: function (delta) {
@@ -339,7 +369,7 @@ define(["d3"], function (d3) {
 		},
 
 		getAverageSpeed: function () {
-			var avg = this.distance / 10 / this.time * 360;
+			var avg = this.distance / (this.time / 3600);
 
 			return avg;
 		},

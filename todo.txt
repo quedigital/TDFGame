@@ -1,8 +1,7 @@
+// TODO: power is reduced, via easing function, when energy is below 20% (and player avatar starts sweating)
 // TODO: fatigue? bonking penalty?
-// TODO: bonk recovery
 // TODO: burst energy vs. overall energy?
 // TODO: change power curve to more straightforward power-to-multiplier interpolation at intervals (2s, 5s, 60s, 5m, 20m, 45m, 3hrs)
-// TODO: descending ability?
 // TODO: crashing on curves
 // TODO: team with most riders "pulling" in a group get to control it (ie, set its pace)
 // TODO: rider modeling/visualizer
@@ -52,3 +51,6 @@ rolling course
 // DONE: slowing down, not stopping immediately, when out of energy [averages last speed]
 // DONE: sprinting power may need to be re-thought since the step size is 10 seconds (that's too long to be considered "accelerating" to 1600 watts if that only lasts 2 seconds) [1 second intervals now]
 // DONE: come up with a starting fuel tank number [based on FTP minus recovery rate]
+// DONE: implement and test descending ability
+// DONE: negative energy is slower to recover
+// DONE: bonk recovery

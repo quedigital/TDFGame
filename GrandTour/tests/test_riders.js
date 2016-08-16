@@ -23,7 +23,8 @@ function makeBasicRiders (obj) {
 		acceleration: 40,
 		weight: 70,
 		flatAbility: .8,
-		climbingAbility: .2
+		climbingAbility: .2,
+		descendingAbility:.5
 	});
 
 	var sprinter = new Rider({
@@ -34,18 +35,20 @@ function makeBasicRiders (obj) {
 		acceleration: 800,
 		weight: 90,
 		flatAbility: .7,
-		climbingAbility: .1
+		climbingAbility: .1,
+		descendingAbility:.7
 	});
 
 	var climber = new Rider({
 		name: "Climber",
-		maxPower: 1300,
+		maxPower: 1100,
 		ftpPower: 455,
 		recovery: 325,
 		acceleration: 30,
 		weight: 60,
 		flatAbility: .65,
-		climbingAbility: .8
+		climbingAbility: .8,
+		descendingAbility:.6
 	});
 
 	obj.tt = tt;
@@ -81,7 +84,7 @@ describe("Grand Tour", function () {
 			this.rm.setMap(flat_course);
 
 			this.tt.setEffort({ power: 500 });
-			this.sprinter.setEffort({ power: 500 });
+			this.sprinter.setEffort({ power: 465 });
 			this.tt_full.setEffort(1);
 
 			this.rm.addRider(this.tt);
@@ -168,8 +171,10 @@ describe("Grand Tour", function () {
 			makeBasicRiders(new_riders);
 			this.mtn_tt = new_riders.tt;
 
-			this.mtn_tt.setEffort({ power: 480 });
-			this.climber.setEffort({ power: 480 });
+			this.mtn_tt.setEffort({ power: 430 });
+			this.climber.setEffort({ power: 430 });
+
+			this.climber.options.name = "Bob";
 
 			mtn_rm.addRider(this.mtn_tt);
 			mtn_rm.addRider(this.climber);
@@ -181,21 +186,30 @@ describe("Grand Tour", function () {
 			mtn_rm.runToFinish();
 		});
 
-		it("Steep gradient takes about 15 minutes longer to ride than flat course", function () {
-			expect(this.mtn_tt.getTimeInSeconds() - this.tt.getTimeInSeconds()).to.be.within(14 * 60, 16.5 * 60);
+		it("Average power around 430 for both", function () {
+			expect(this.mtn_tt.getAveragePower()).to.be.within(410, 440);
+			expect(this.climber.getAveragePower()).to.be.within(410, 440);
+		});
+
+		it("Steep gradient takes about 20 minutes longer to ride than flat course", function () {
+			expect(this.mtn_tt.getTimeInSeconds() - this.tt.getTimeInSeconds()).to.be.within(19 * 60, 23 * 60);
 		});
 
 		it("TT and Climber both pretty much run out of fuel on 12% 8 km climb", function () {
-			this.mtn_tt.getFuelPercent().should.be.below(1);
-			this.climber.getFuelPercent().should.be.below(1);
+			this.mtn_tt.getFuelPercent().should.be.below(20).and.be.above(0);
+			this.climber.getFuelPercent().should.be.below(20).and.be.above(0);
 		});
 
-		it("Hill Climb TT average speed is around 16 km/h", function () {
-			this.mtn_tt.getAverageSpeed().should.be.within(14, 18);
+		it("Hill Climb TT average speed is around 14 km/h", function () {
+			this.mtn_tt.getAverageSpeed().should.be.within(13, 15);
 		});
 
-		it("Climber wins mountain stage by about 9 minutes", function () {
-			expect(this.mtn_tt.getTimeInSeconds() - this.climber.getTimeInSeconds()).to.be.within(8.5 * 60, 9.5 * 60);
+		it("Climber average speed is around 24 km/h", function () {
+			this.climber.getAverageSpeed().should.be.within(23, 25);
+		});
+
+		it("Climber wins mountain stage by about 13 minutes", function () {
+			expect(this.mtn_tt.getTimeInSeconds() - this.climber.getTimeInSeconds()).to.be.within(12 * 60, 14 * 60);
 		});
 	});
 
@@ -273,12 +287,12 @@ describe("Grand Tour", function () {
 			rm.runToFinish();
 		});
 
-		it("Ultra-Light Climber is roughly 4 minutes faster than Standard Climber", function () {
-			(this.climber.getTimeInSeconds() - this.lite_climber.getTimeInSeconds()).should.be.within(250, 270);
+		it("Ultra-Light Climber is roughly 6 minutes faster than Standard Climber", function () {
+			(this.climber.getTimeInSeconds() - this.lite_climber.getTimeInSeconds()).should.be.within(5 * 60, 7 * 60);
 		});
 
-		it("Poor Climber is about 40 seconds slower than Standard Climber", function () {
-			(this.poor_climber.getTimeInSeconds() - this.climber.getTimeInSeconds()).should.be.within(35, 45);
+		it("Poor Climber is about a minute slower than Standard Climber", function () {
+			(this.poor_climber.getTimeInSeconds() - this.climber.getTimeInSeconds()).should.be.within(55, 70);
 		});
 	});
 
@@ -293,29 +307,46 @@ describe("Grand Tour", function () {
 			rm.setMap(flat_course);
 			rm2.setMap(downhill_course);
 
-			this.dh = {};
+			this.dh = {}, this.power = {}, this.descender = {};
 
 			makeBasicRiders(this);
 			makeBasicRiders(this.dh);
+			makeBasicRiders(this.power);
+			makeBasicRiders(this.descender);
 
 			this.tt.setEffort(1);
 			this.dh.tt.setEffort(0.01);
+			this.power.tt.options.name = "Power Downhill";
+			this.power.tt.setEffort( { power: 500 } );
+			this.descender.tt.options.name = "Good Descender";
+			this.descender.tt.options.descendingAbility = .7; //vs .5
+			this.descender.tt.setEffort( { power: 500 });
 
 			rm.addRider(this.tt);
 			rm2.addRider(this.dh.tt);
+			rm2.addRider(this.power.tt);
+			rm2.addRider(this.descender.tt);
 
 			rm.runToFinish();
 			rm2.runToFinish();
 		});
 
-		it("Coasting downhill 15km is 8-12 minutes faster (80-90 km/h) than 15km flat", function () {
-			(this.tt.getTimeInSeconds() - this.dh.tt.getTimeInSeconds()).should.be.within(8 * 60, 12 * 60);
-			this.dh.tt.getAverageSpeed().should.be.within(75, 85);
+		it("Coasting downhill 15km is 10-13 minutes faster (~85 km/h, 62mph) than 15km flat", function () {
+			(this.tt.getTimeInSeconds() - this.dh.tt.getTimeInSeconds()).should.be.within(10 * 60, 14 * 60);
+			this.dh.tt.getAverageSpeed().should.be.within(80, 95);
 		});
 
 		it("Coasting downhill uses hardly any power", function () {
-			this.tt.getAveragePower().should.be.within(300, 400);
+			this.tt.getAveragePower().should.be.within(260, 300);
 			this.dh.tt.getAveragePower().should.be.within(1, 20);
+		});
+
+		it("A good descender beats an average descender by about 30 seconds", function () {
+			(this.power.tt.getTimeInSeconds() - this.descender.tt.getTimeInSeconds()).should.be.within(25, 40);
+		});
+
+		it("Using power downhill is about a minute faster than coasting", function () {
+			(this.dh.tt.getTimeInSeconds() - this.power.tt.getTimeInSeconds()).should.be.within(.5 * 60, 1.5 * 60);
 		});
 	});
 
@@ -351,6 +382,8 @@ describe("Grand Tour", function () {
 
 			this.tt_steady = new_riders.tt;
 			this.tt_steady.setEffort({ power: 350 });
+			this.climber.setEffort({ power: 350 });
+			this.sprinter.setEffort({ power: 350 });
 
 			rm.addRider(this.tt);
 			rm.addRider(this.climber);
@@ -366,12 +399,12 @@ describe("Grand Tour", function () {
 			this.rm.getStageDistance().should.be.equal(125);
 		});
 
-		it("Takes about 3 hours", function () {
-			this.rm.getTimeElapsed().should.be.within(2.5 * 60 * 60, 4 * 60 * 60);
+		it("Winner takes about 3 hours", function () {
+			this.tt_steady.getTimeInSeconds().should.be.within(2.5 * 60 * 60, 4 * 60 * 60);
 		});
 
 		it("Finish order for rolling 8% course @ full effort: TT, Climber, Sprinter", function () {
-			this.tt.getTimeInSeconds().should.be.below(this.climber.getTimeInSeconds());
+			this.tt_steady.getTimeInSeconds().should.be.below(this.climber.getTimeInSeconds());
 			this.climber.getTimeInSeconds().should.be.below(this.sprinter.getTimeInSeconds());
 		});
 
@@ -432,7 +465,11 @@ describe("Grand Tour", function () {
 
 			rm.makeGroup([this.tt2, this.tt3, this.tt4, this.tt5]);
 
+			rm.runTo( { km: -2 });
+
 			// TODO: group speeds up to catch breakaway rider
+			console.log(this.tt.getDistance());
+			console.log(this.tt3.getDistance());
 
 			rm.runToFinish();
 
@@ -448,11 +485,10 @@ describe("Grand Tour", function () {
 		});
 
 		it("Breakaway rider gets caught by group", function () {
-			console.log(this.tt.getTimeAsString());
-			console.log(this.tt2.getTimeAsString());
-			console.log(this.tt3.getTimeAsString());
-			console.log(this.tt4.getTimeAsString());
-			console.log(this.tt5.getTimeAsString());
+			this.tt.showStats();
+
+			this.tt2.showStats();
+
 			console.log("****");
 		});
 	});
@@ -464,8 +500,10 @@ describe("Grand Tour", function () {
 			console.log("start long flat stage");
 
 			this.rm = new RaceManager();
+			this.rm2 = new RaceManager();
 
 			flat_course = new Map({gradients: [[0, 0], [150, 0]]});    // 150 km
+			var flat_course2 = new Map({gradients: [[0, 0], [150, 0]]});    // 150 km
 
 			makeBasicRiders(this);
 
@@ -473,22 +511,29 @@ describe("Grand Tour", function () {
 
 			makeBasicRiders(new_riders);
 			this.tt_refuel = new_riders.tt;
-			this.climber_nobonk = new_riders.climber;
+			this.climber_nopenalty = new_riders.climber;
 
-			this.climber.setEffort({ power: 350 });
-			this.climber_nobonk.setEffort({ power: 350 });
+			this.climber.setEffort({ power: 320 });
+			this.climber_nopenalty.setEffort({ power: 320 });
+			this.climber_nopenalty.options.redzonePenalty = false;
+
+			this.tt.setEffort({ power: 470 });
+			this.tt_refuel.setEffort({ power: 470 });
 
 			this.rm.setMap(flat_course);
+			this.rm2.setMap(flat_course2);
 
-			this.rm.addRider(this.tt);
-			this.rm.addRider(this.sprinter);
 			this.rm.addRider(this.climber);
-			this.rm.addRider(this.climber_nobonk);
-			this.rm.addRider(this.tt_refuel);
+			this.rm.addRider(this.climber_nopenalty);
+			this.rm2.addRider(this.tt);
+			this.rm2.addRider(this.tt_refuel);
 		});
 
-		it("Refueling even once finishes about 20 seconds faster", function () {
-			this.rm.runTo({ percent: 50 });
+		it("Refueling even once finishes about 3 minutes faster", function () {
+			this.rm.runTo({ km: -5 });
+			this.rm2.runTo({ km: -5 });
+
+			this.climber.getDistance().should.equal(this.climber_nopenalty.getDistance());
 
 			this.tt_refuel.getFuelPercent().should.be.below(1);
 
@@ -497,24 +542,32 @@ describe("Grand Tour", function () {
 			this.tt_refuel.getFuelPercent().should.equal(100);
 
 			this.climber.refuel({ value: 400 });
-			this.climber_nobonk.refuel({ value: 400 });
+			this.climber_nopenalty.refuel({ value: 400 });
 
-			this.climber.setEffort(1);  // programmed to bonk
-			this.climber.options.name = "Bonker";
+			this.climber.resetRedzoneCount();
+			this.climber_nopenalty.resetRedzoneCount();
+
+			this.climber_nopenalty.setEffort(1);
+			this.climber.setEffort(1);
+			this.climber.options.name = "Climber with Redzone Penalty";
 
 			this.rm.runToFinish();
+			this.rm2.runToFinish();
 
-			(this.tt.getTimeInSeconds() - this.tt_refuel.getTimeInSeconds()).should.be.within(20, 30);
+			this.tt.getFuelPercent().should.be.below(5);
+			this.tt_refuel.getFuelPercent().should.be.above(50);
+
+			(this.tt.getTimeInSeconds() - this.tt_refuel.getTimeInSeconds()).should.be.within(2 * 60, 4 * 60);
 		});
 
-		it("Bonking is bad", function () {
-			console.log("climber penalty = " + this.climber.getPenaltyCount());
-			console.log("climber nobonk penalty = " + this.climber_nobonk.getPenaltyCount());
+		it("Redzone penalty (ie, exerting with no fuel) is costly, about a minute in final 5k", function () {
+			this.climber.showStats();
+			this.climber_nopenalty.showStats();
 
-			console.log(this.climber.getAveragePower());
-			console.log(this.climber_nobonk.getAveragePower());
-			console.log(this.climber.getTimeInSeconds());
-			console.log(this.climber_nobonk.getTimeInSeconds());
+			this.climber.getRedzoneCount().should.be.above(100);
+			this.climber_nopenalty.getRedzoneCount().should.equal(0);
+
+			(this.climber.getTimeInSeconds() - this.climber_nopenalty.getTimeInSeconds()).should.be.within(.75 * 60, 1.25 * 60);
 		});
 	});
 

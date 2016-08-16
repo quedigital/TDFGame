@@ -220,6 +220,12 @@ define(["underscore"], function (_) {
 					target = this.getStageDistance() + (dist / 1000);
 				else
 					target = dist / 1000;
+			} else if (opts.km) {
+				var dist = opts.km;
+				if (dist < 0)
+					target = this.getStageDistance() + dist;
+				else
+					target = dist;
 			} else if (opts.percent) {
 				target = this.getStageDistance() * (opts.percent / 100);
 			}

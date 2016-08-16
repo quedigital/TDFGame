@@ -102,6 +102,10 @@ define(["d3"], function (d3) {
 			console.log("yep");
 		}
 
+		if (this.options.redzonePenalty == undefined) {
+			this.options.redzonePenalty = true;
+		}
+
 		this.effort = this.options.effort ? this.options.effort : 1;
 
 		this.reset();
@@ -115,8 +119,7 @@ define(["d3"], function (d3) {
 			this.currentPower = 0;
 			this.currentSpeed = 0;
 			this.totalPowerSpent = 0;
-			this.penalty = 0;
-			this.penaltyCount = 0;
+			this.redzone_count = 0;
 
 			this.recoveryMultiplier = this.getMultiplierForPower(this.options.recovery);
 
@@ -174,13 +177,13 @@ define(["d3"], function (d3) {
 			this.time += interval;
 
 			if (this.options.name == "Bob") {
-				console.log(this.currentPower + " => " + this.getCurrentSpeed() + " - " + this.getDistance() + " : " + this.getTimeAsString());
+				//console.log(this.currentPower + " => " + this.getCurrentSpeed() + " - " + this.getDistance() + " : " + this.getTimeAsString());
 			}
 		},
 
 		// step 1 second
 		step: function (gradient, distanceToFinish) {
-			var desiredPower = this.options.maxPower * this.effort * (1.0 - this.penalty);
+			var desiredPower = this.options.maxPower * this.effort;
 
 			this.powerStep(desiredPower, gradient, distanceToFinish);
 		},
@@ -210,14 +213,6 @@ define(["d3"], function (d3) {
 
 				this.currentPower = Math.min(Math.max(0, this.fueltank), attemptedPower);
 
-				/*
-				if (this.fueltank < desired) {
-					this.takePenalty();
-				} else {
-					this.recoverPenalty();
-				}
-				*/
-
 				// THEORY: the less fuel you have, the slower you go (with exponential out easing)
 				//var fatigue = d3.easeExpOut(this.getFuelPercent());
 				//this.currentPower *= fatigue;
@@ -229,11 +224,6 @@ define(["d3"], function (d3) {
 		},
 
 		getSpeedFromPower: function (power, gradient) {
-			var angle = 0;
-
-			if (gradient != 0)
-				angle = Math.atan(gradient);
-
 			// P = Kr M s + Ka A s v^2 d + g i M s
 			// from http://theclimbingcyclist.com/gradients-and-cycling-how-much-harder-are-steeper-climbs/
 
@@ -252,13 +242,26 @@ define(["d3"], function (d3) {
 			var roots = solveCubic(a, 0, c1 + c2, -power);
 
 			// NOTE: scaled gradient to make climbing "ability" more pronounced
-			var rise = gradient * 5, run = Math.cos(angle);
+			var rise = Math.sin(gradient * 8), run = Math.cos(gradient * 8);
 			var dist = roots[0] / 1000;
 
-			var flat = dist * run * (.5 + .5 * this.options.flatAbility);
-			var climb = dist * rise * this.options.climbingAbility;
+			var climb = 0, descend = 0;
 
-			return flat + climb;
+			var flat = dist * run * (.5 + .5 * this.options.flatAbility);
+			if (rise > 0)
+				climb = dist * rise * (.2 + .8 * this.options.climbingAbility);
+			else if (rise < 0) {
+				// descending doesn't get quite the same gradient advantage as climbing, to keep speeds down
+				var descent = Math.sin(gradient * 4);
+				descend = dist * -descent * (.4 + .6 * this.options.descendingAbility);
+			}
+
+			if (this.options.name == "Bob") {
+				var percent_flat = Math.round(flat / dist * 100);
+				var percent_climb = Math.round(climb / dist * 100);
+			}
+
+			return flat + climb + descend;
 		},
 
 		updateDistance: function (gradient, distanceToFinish) {
@@ -315,7 +318,14 @@ define(["d3"], function (d3) {
 
 			//this.fueltank = Math.max(0, this.fueltank - powerDelta);
 
-			this.fueltank += this.options.recovery * this.recoveryMultiplier;
+			if (this.fueltank >= 0 || !this.options.redzonePenalty) {
+				this.fueltank += this.options.recovery * this.recoveryMultiplier;
+			} else {
+				var recovery_amount = this.options.recovery * this.recoveryMultiplier;
+				var redzone_factor = 1.223022*Math.pow(-this.fueltank, -0.1667914);
+				this.fueltank += recovery_amount * redzone_factor;
+				this.redzone_count++;
+			}
 
 			this.fueltank = Math.min(this.fueltank, this.maxfuel);
 		},
@@ -392,25 +402,21 @@ define(["d3"], function (d3) {
 			if (opts.percent) {
 				this.fueltank = this.maxfuel * (opts.percent / 100);
 			} else if (opts.value) {
-				this.fueltank = opts.value;
+				this.fueltank = opts.value * this.getMultiplierForPower(opts.value) * 17 * 60;;
 			}
 		},
 
-		takePenalty: function () {
-			this.penalty = 1.0;
-			this.penaltyCount++;
+		getRedzoneCount: function () {
+			return this.redzone_count;
 		},
 
-		isInPenalty: function () {
-			return this.penalty > 0;
+		resetRedzoneCount: function () {
+			this.redzone_count = 0;
 		},
 
-		recoverPenalty: function () {
-			this.penalty = Math.max(0, this.penalty - 0.025);      // TODO: bonk recovery
-		},
-
-		getPenaltyCount: function () {
-			return this.penaltyCount;
+		showStats: function () {
+			var s = this.options.name + ": " + this.getTimeAsString() + " @ " + this.getDistance() + "km " + Math.round(this.getFuelPercent()) + "% (" + Math.round(this.getAverageSpeed()) + "kmh, " + Math.round(this.getAveragePower()) + " watts)";
+			console.log(s);
 		}
 	};
 

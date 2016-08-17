@@ -115,7 +115,7 @@ describe("Grand Tour", function () {
 		});
 	});
 
-	describe("Sprinting", function () {
+	describe("Sprinting Flat Stage", function () {
 		before(function () {
 			var rm = new RaceManager();
 			var flat_course = new Map({gradients: [[0, 0], [15, 0]]}); // 15 km flat
@@ -127,31 +127,35 @@ describe("Grand Tour", function () {
 			rm.addRider(this.sprinter);
 			rm.addRider(this.tt);
 
-			this.tt.setEffort( { power: 300 });
-			this.sprinter.setEffort( { power: 300 });
-			rm.makeGroup({ members: [this.tt, this.sprinter] });
-			rm.runTo({ meters: -800 });
+			rm.makeGroup({ members: [this.tt, this.sprinter], effort: { power: 300 } });
 
 			this.rm = rm;
 		});
 
-		it("Sprinter and TT have saved enough energy for sprint", function () {
-			(this.sprinter.getFuelPercent()).should.be.above(50);
-			(this.tt.getFuelPercent()).should.be.above(50);
+		it("Sprinter and TT are still together", function () {
+			this.rm.runTo({meters: -400});
+
+			(this.rm.getDistanceBetween(this.tt, this.sprinter)).should.be.below(.01);
 		});
 
-		it("Sprinter beats TT in final 800m", function () {
+		it("Sprinter and TT have saved enough energy for sprint", function () {
+			(this.sprinter.getFuelPercent()).should.be.above(60);
+			(this.tt.getFuelPercent()).should.be.above(60);
+		});
+
+		it("Sprinter beats TT in final 400m", function () {
+			this.rm.dropFromGroup(this.sprinter);
+
 			this.tt.setEffort(1);
 			this.sprinter.setEffort(1);
-			this.rm.dropFromGroup(this.sprinter);
 
 			this.rm.runToFinish();
 
 			this.sprinter.getTimeInSeconds().should.be.below(this.tt.getTimeInSeconds());
 		});
 
-		it("Sprinter beats TT by about 5 seconds in last 800m", function () {
-			(this.tt.getTimeInSeconds() - this.sprinter.getTimeInSeconds()).should.be.within(3, 7);
+		it("Sprinter beats TT by about 3 seconds in last 400m", function () {
+			(this.tt.getTimeInSeconds() - this.sprinter.getTimeInSeconds()).should.be.within(2, 5);
 		});
 	});
 
@@ -466,9 +470,9 @@ describe("Grand Tour", function () {
 			rm.addRider(this.tt4);
 			rm.addRider(this.tt5);
 
-			rm.makeGroup({ members: [this.tt2, this.tt3, this.tt4, this.tt5], power: 345 });
+			this.group = rm.makeGroup({ members: [this.tt2, this.tt3, this.tt4, this.tt5], effort: { power: 400 } });
 
-			this.tt_solo.setEffort({ power: 352 });
+			this.tt_solo.setEffort({ power: 350 });
 
 			this.rm = rm;
 		});
@@ -477,27 +481,20 @@ describe("Grand Tour", function () {
 			this.rm.getStageDistance().should.be.equal(95);
 		});
 
-		it("With leader 6km from finish, the gap should be about 2 minutes between breakaway and peloton", function () {
-			this.rm.runTo( { km: -6 });
+		it("Group stays together after 80km", function () {
+			this.rm.runTo( { km: 80 });
+
+			expect(this.rm.getDistanceBetween(this.tt2, this.tt3)).to.be.below(.025);
+			expect(this.rm.getDistanceBetween(this.tt2, this.tt4)).to.be.below(.025);
+			expect(this.rm.getDistanceBetween(this.tt2, this.tt5)).to.be.below(.025);
+		});
+
+		it("With leader 8km from finish, the gap should be about 1 minute between breakaway and peloton", function () {
+			this.rm.runTo( { km: -8 });
 
 			var gap = this.rm.getTimeGapBetween(this.tt_solo, this.tt2);
 
-			expect(gap).to.be.within(1.5 * 60, 2.5 * 60);
-		});
-
-		it("Group finishes with the same time", function () {
-			// group speeds up to catch breakaway rider
-			this.rm.setGroupEffort(this.tt2, { power: 520 });
-
-			this.rm.runToFinish();
-
-			this.tt_solo.showStats();
-			this.tt2.showStats();
-			this.tt3.showStats();
-			this.tt4.showStats();
-			this.tt5.showStats();
-
-			expect(this.tt2.getTime()).to.equal(this.tt3.getTime()).and.equal(this.tt4.getTime()).and.equal(this.tt5.getTime());
+			expect(gap).to.be.within(.5 * 60, 1.5 * 60);
 		});
 
 		it("Group riders don't use up as much energy as the solo rider", function () {
@@ -507,7 +504,31 @@ describe("Grand Tour", function () {
 			expect(this.tt5.getFuelPercent()).to.be.above(this.tt_solo.getFuelPercent());
 		});
 
+		it("Group finishes with the same time", function () {
+			this.tt_solo.showStats();
+			this.tt2.showStats();
+			this.tt3.showStats();
+			this.tt4.showStats();
+			this.tt5.showStats();
+
+			// group speeds up to catch breakaway rider
+
+			this.group.setOptions({ effort: { power: 625 } });
+
+			this.rm.runToFinish();
+
+			expect(this.rm.getTimeGapBetween(this.tt2, this.tt3)).to.be.below(1);
+			expect(this.rm.getTimeGapBetween(this.tt2, this.tt4)).to.be.below(1);
+			expect(this.rm.getTimeGapBetween(this.tt2, this.tt5)).to.be.below(1);
+		});
+
 		it("Breakaway rider gets caught by group", function () {
+			this.tt_solo.showStats();
+			this.tt2.showStats();
+			this.tt3.showStats();
+			this.tt4.showStats();
+			this.tt5.showStats();
+
 			expect(this.tt2.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 			expect(this.tt3.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 			expect(this.tt4.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
@@ -515,6 +536,7 @@ describe("Grand Tour", function () {
 		});
 	});
 
+	/*
 	describe("Refueling and Redzoning", function () {
 		var flat_course, tt, sprinter;
 
@@ -587,6 +609,7 @@ describe("Grand Tour", function () {
 			(this.climber.getTimeInSeconds() - this.climber_nopenalty.getTimeInSeconds()).should.be.within(.75 * 60, 1.25 * 60);
 		});
 	});
+	*/
 
 		/*
 		it("Riders can get dropped from their groups", function () {

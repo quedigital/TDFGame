@@ -61,33 +61,28 @@ define(["underscore", "group"], function (_, Group) {
 		},
 
 		doStep: function (options) {
-			var me = this;
+			var i;
 
 			var thisMapDistance = this.getStageDistance();
 
 			var allFinished = true;
 
-			// 1. process solo and group leaders first
-			_.each(this.riders, function (riderObj, index) {
-				var rider = riderObj.rider;
-				var d = rider.getDistance();
-				var distanceToFinish = thisMapDistance - d;
-				var map = me.map;
-				var gradient = map.getGradientAtDistance(d);
+			for (i = 0; i < this.riders.length; i++) {
+				var rider = this.riders[i].rider;
 
-				if (!rider.isFinished() && !rider.isBehindGroupLeader()) {
-					if (rider.isGroupLeader()) {
-						var group = me.findGroupWith(rider);
-						if (group) {
-							var groupPowerSetting = group.getPowerSetting();
-							rider.setEffort({ power: groupPowerSetting });
-						} else {
-							// ERROR!
-							debugger;
+				if (!rider.isFinished()) {
+					if (rider.isInGroup()) {
+						var group = rider.getGroup();
+						if (group && !group.hasStepped()) {
+							group.step(this);
 						}
-					}
+					} else {
+						var d = rider.getDistance();
+						var distanceToFinish = thisMapDistance - d;
+						var gradient = this.map.getGradientAtDistance(d);
 
-					rider.step(gradient, distanceToFinish);
+						rider.step(gradient, distanceToFinish);
+					}
 
 					if (rider.getDistance() >= thisMapDistance) {
 						rider.setFinished(true);
@@ -97,37 +92,16 @@ define(["underscore", "group"], function (_, Group) {
 				}
 
 				if (!options.nogui)
-					me.updateGUI(rider, riderObj.gui);
-			});
+					this.updateGUI(rider, riderObj.gui);
+			}
 
-			// 2. process group followers second
-			_.each(this.riders, function (riderObj, index) {
-				var rider = riderObj.rider;
-				var d = rider.getDistance();
-				var map = me.map;
-				var gradient = map.getGradientAtDistance(d);
-
-				if (!rider.isFinished() && rider.isBehindGroupLeader()) {
-					var group = me.findGroupWith(rider);
-					var groupPowerSetting = group.getPowerSetting();
-
-					rider.stepWithLeader(gradient, groupPowerSetting);
-
-					if (rider.getDistance() >= thisMapDistance) {
-						rider.setFinished(true);
-					} else {
-						allFinished = false;
-					}
-				}
-
-				if (!options.nogui)
-					me.updateGUI(rider, riderObj.gui);
-			});
-
-			this.stepGroups();
+			for (i = 0; i < this.groups.length; i++) {
+				var group = this.groups[i];
+				group.endStep();
+			}
 
 			if (allFinished) {
-				me.stop();
+				this.stop();
 			}
 
 			this.time++;
@@ -144,12 +118,6 @@ define(["underscore", "group"], function (_, Group) {
 			return allFinished;
 		},
 
-		stepGroups: function () {
-			for (var i = 0; i < this.groups.length; i++) {
-				this.groups[i].step();
-			}
-		},
-
 		findGroupWith: function (rider) {
 			for (var i = 0; i < this.groups.length; i++) {
 				if (this.groups[i].hasRider(rider))
@@ -162,6 +130,10 @@ define(["underscore", "group"], function (_, Group) {
 		getStageDistance: function () {
 			if (this.map) return this.map.getTotalDistance();
 			else return undefined;
+		},
+
+		getGradientAtDistance: function (distance) {
+			return this.map.getGradientAtDistance(distance);
 		},
 
 		getLeadingRider: function () {
@@ -274,14 +246,16 @@ define(["underscore", "group"], function (_, Group) {
 		makeGroup: function (options) {
 			var riderArray = options.members;
 
-			for (var i = 0; i < riderArray.length; i++) {
-				var rider = riderArray[i];
-				rider.setGroupLeader(riderArray[0]);
-			}
-
 			var g = new Group(options);
 
+			for (var i = 0; i < riderArray.length; i++) {
+				var rider = riderArray[i];
+				rider.setGroup(g);
+			}
+
 			this.groups.push(g);
+
+			return g;
 		},
 
 		dropFromGroup: function (rider) {
@@ -327,11 +301,8 @@ define(["underscore", "group"], function (_, Group) {
 			return gap;
 		},
 
-		setGroupEffort: function (member, options) {
-			var group = this.findGroupWith(member);
-			if (group) {
-				group.setEffort(options);
-			}
+		getDistanceBetween: function (rider1, rider2) {
+			return Math.abs(rider1.getDistance() - rider2.getDistance());
 		}
 	};
 

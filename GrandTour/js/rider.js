@@ -130,7 +130,7 @@ define(["d3"], function (d3) {
 
 			this.maxfuel = this.fueltank = ftp - recover;
 
-			this.groupLeader = undefined;
+			this.group = undefined;
 		},
 
 		getDistance: function () {
@@ -168,7 +168,11 @@ define(["d3"], function (d3) {
 		},
 
 		isInGroup: function () {
-			return this.groupLeader != undefined;
+			return this.group != undefined;
+		},
+
+		getGroup: function () {
+			return this.group;
 		},
 
 		isGroupLeader: function () {
@@ -196,18 +200,6 @@ define(["d3"], function (d3) {
 			var desiredPower = this.options.maxPower * this.effort;
 
 			this.powerStep(desiredPower, gradient, distanceToFinish);
-		},
-
-		stepWithLeader: function (gradient) {
-			if (!this.groupLeader) {
-				console.log("ERROR");
-				return;
-			}
-
-			// THEORY 1: use 80% of the leader's power (but same speed & distance)
-			var groupPower = this.groupLeader.getCurrentPower() * .8;
-
-			this.powerStep(groupPower, gradient);
 		},
 
 		accelerateTo: function (desired) {
@@ -306,6 +298,10 @@ define(["d3"], function (d3) {
 
 			var powerDelta = Math.max(0, this.currentPower) * multiplier;
 
+			if (this.isInGroup() && !this.isGroupLeader()) {
+				powerDelta *= .8;
+			}
+
 			this.fueltank -= powerDelta;
 
 			// slower recovery after going negative
@@ -362,8 +358,8 @@ define(["d3"], function (d3) {
 			if (this.effort <= 0) this.effort = .01;
 		},
 
-		setGroupLeader: function (rider) {
-			this.groupLeader = rider;
+		setGroup: function (group) {
+			this.group = group;
 		},
 
 		getAverageSpeed: function () {

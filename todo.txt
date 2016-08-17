@@ -1,3 +1,6 @@
+// TODO: group needs a better "effort" setting
+// TODO: sprinter may use too much energy at 1600 watts
+// TODO: riders try to stay in groups by maintaining the same distance/speed [ie, power is different per rider; drafting comes later]
 // TODO: refactor step flow so groups process first (as one) and then individuals?
 // TODO: ability to "speed up" and "slow down" to maintain desired speed per update? similar to trying to ride with another rider for protection, etc.?
 // TODO: power is reduced, via easing function, when energy is below 20% (and player avatar starts sweating)

@@ -1,12 +1,12 @@
+// TODO: refactor step flow so groups process first (as one) and then individuals?
+// TODO: ability to "speed up" and "slow down" to maintain desired speed per update? similar to trying to ride with another rider for protection, etc.?
 // TODO: power is reduced, via easing function, when energy is below 20% (and player avatar starts sweating)
-// TODO: fatigue? bonking penalty?
 // TODO: burst energy vs. overall energy?
 // TODO: change power curve to more straightforward power-to-multiplier interpolation at intervals (2s, 5s, 60s, 5m, 20m, 45m, 3hrs)
 // TODO: crashing on curves
 // TODO: team with most riders "pulling" in a group get to control it (ie, set its pace)
 // TODO: rider modeling/visualizer
 // TODO: add a debug rider UI to the test engine
-// TODO: group tests
 // TODO: time trials!
 // TODO: helicopter view with current, live standings
 
@@ -54,3 +54,6 @@ rolling course
 // DONE: implement and test descending ability
 // DONE: negative energy is slower to recover
 // DONE: bonk recovery
+// DONE: group tests
+// DONE: need group power or speed setting (varies per leader!)
+// DONE: fatigue? bonking penalty? [negative fuel = slow to recover; fatigue can be reduced power below 20%]

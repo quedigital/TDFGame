@@ -149,8 +149,14 @@ define(["d3"], function (d3) {
 			return String(this.getTimeInSeconds()).toHHMMSS();
 		},
 
+		// in km/s
 		getCurrentSpeed: function () {
-			return this.currentSpeed * 3600;
+			return this.currentSpeed;
+		},
+
+		// in km/h
+		getCurrentSpeedInKMH: function () {
+			return this.currentSpeed * 60 * 60;
 		},
 
 		isFinished: function () {
@@ -162,6 +168,14 @@ define(["d3"], function (d3) {
 		},
 
 		isInGroup: function () {
+			return this.groupLeader != undefined;
+		},
+
+		isGroupLeader: function () {
+			return this.groupLeader == this;
+		},
+
+		isBehindGroupLeader: function () {
 			return (this.groupLeader != undefined && this.groupLeader != this);
 		},
 
@@ -175,10 +189,6 @@ define(["d3"], function (d3) {
 			this.totalPowerSpent += this.currentPower;
 
 			this.time += interval;
-
-			if (this.options.name == "Bob") {
-				//console.log(this.currentPower + " => " + this.getCurrentSpeed() + " - " + this.getDistance() + " : " + this.getTimeAsString());
-			}
 		},
 
 		// step 1 second
@@ -190,21 +200,14 @@ define(["d3"], function (d3) {
 
 		stepWithLeader: function (gradient) {
 			if (!this.groupLeader) {
-				this.step(gradient);
+				console.log("ERROR");
 				return;
 			}
 
-			var dist = this.groupLeader.getDistance();
+			// THEORY 1: use 80% of the leader's power (but same speed & distance)
+			var groupPower = this.groupLeader.getCurrentPower() * .8;
 
-			var powerNeeded = this.getPowerNeededToReach(dist);
-
-			this.powerStep(powerNeeded, gradient);
-		},
-
-		getPowerNeededToReach: function (dist) {
-			// TODO: this needs to be thought-out better
-			var powerNeeded = (dist - this.getDistance()) / .004;
-			return powerNeeded;
+			this.powerStep(groupPower, gradient);
 		},
 
 		accelerateTo: function (desired) {
@@ -256,18 +259,13 @@ define(["d3"], function (d3) {
 				descend = dist * -descent * (.4 + .6 * this.options.descendingAbility);
 			}
 
-			if (this.options.name == "Bob") {
-				var percent_flat = Math.round(flat / dist * 100);
-				var percent_climb = Math.round(climb / dist * 100);
-			}
-
 			return flat + climb + descend;
 		},
 
 		updateDistance: function (gradient, distanceToFinish) {
 			var timeInterval = 1;
 
-			if (this.isInGroup()) {
+			if (this.isBehindGroupLeader()) {
 				// TODO: this shouldn't be automatic
 				this.distance = this.groupLeader.getDistance();
 
@@ -308,15 +306,9 @@ define(["d3"], function (d3) {
 
 			var powerDelta = Math.max(0, this.currentPower) * multiplier;
 
-			if (this.fueltank < powerDelta) {
-				if (this.options.name == "Bob") {
-					console.log("out @ " + this.getTimeAsString());
-				}
-			}
-
 			this.fueltank -= powerDelta;
 
-			//this.fueltank = Math.max(0, this.fueltank - powerDelta);
+			// slower recovery after going negative
 
 			if (this.fueltank >= 0 || !this.options.redzonePenalty) {
 				this.fueltank += this.options.recovery * this.recoveryMultiplier;
@@ -374,10 +366,6 @@ define(["d3"], function (d3) {
 			this.groupLeader = rider;
 		},
 
-		leaveGroup: function () {
-			this.setGroupLeader(undefined);
-		},
-
 		getAverageSpeed: function () {
 			var avg = this.distance / (this.time / 3600);
 
@@ -417,6 +405,14 @@ define(["d3"], function (d3) {
 		showStats: function () {
 			var s = this.options.name + ": " + this.getTimeAsString() + " @ " + this.getDistance() + "km " + Math.round(this.getFuelPercent()) + "% (" + Math.round(this.getAverageSpeed()) + "kmh, " + Math.round(this.getAveragePower()) + " watts)";
 			console.log(s);
+		},
+
+		getCurrentPower: function () {
+			return this.currentPower;
+		},
+
+		getDesiredPower: function () {
+			return this.options.maxPower * this.effort;
 		}
 	};
 

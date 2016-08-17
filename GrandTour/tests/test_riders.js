@@ -129,7 +129,7 @@ describe("Grand Tour", function () {
 
 			this.tt.setEffort( { power: 300 });
 			this.sprinter.setEffort( { power: 300 });
-			rm.makeGroup([this.tt, this.sprinter]);
+			rm.makeGroup({ members: [this.tt, this.sprinter] });
 			rm.runTo({ meters: -800 });
 
 			this.rm = rm;
@@ -143,7 +143,7 @@ describe("Grand Tour", function () {
 		it("Sprinter beats TT in final 800m", function () {
 			this.tt.setEffort(1);
 			this.sprinter.setEffort(1);
-			this.sprinter.leaveGroup();
+			this.rm.dropFromGroup(this.sprinter);
 
 			this.rm.runToFinish();
 
@@ -439,39 +439,36 @@ describe("Grand Tour", function () {
 			rm.setMap(course);
 
 			makeBasicRiders(this);
+			this.tt_solo = this.tt;
+			this.tt_solo.options.name = "TT Solo";
 
 			var new_riders = {};
 
 			makeBasicRiders(new_riders);
 			this.tt2 = new_riders.tt;
+			this.tt2.options.name = "GTT2";
 
 			makeBasicRiders(new_riders);
 			this.tt3 = new_riders.tt;
+			this.tt3.options.name = "GTT3";
 
 			makeBasicRiders(new_riders);
 			this.tt4 = new_riders.tt;
+			this.tt4.options.name = "GTT4";
 
 			makeBasicRiders(new_riders);
 			this.tt5 = new_riders.tt;
+			this.tt5.options.name = "GTT5";
 
-			rm.addRider(this.tt);
+			rm.addRider(this.tt_solo);
 			rm.addRider(this.tt2);
 			rm.addRider(this.tt3);
 			rm.addRider(this.tt4);
 			rm.addRider(this.tt5);
 
-			this.tt.setEffort({ power: 400 });
-			this.tt2.setEffort({ power: 300 });
+			rm.makeGroup({ members: [this.tt2, this.tt3, this.tt4, this.tt5], power: 345 });
 
-			rm.makeGroup([this.tt2, this.tt3, this.tt4, this.tt5]);
-
-			rm.runTo( { km: -2 });
-
-			// TODO: group speeds up to catch breakaway rider
-			console.log(this.tt.getDistance());
-			console.log(this.tt3.getDistance());
-
-			rm.runToFinish();
+			this.tt_solo.setEffort({ power: 352 });
 
 			this.rm = rm;
 		});
@@ -480,25 +477,48 @@ describe("Grand Tour", function () {
 			this.rm.getStageDistance().should.be.equal(95);
 		});
 
+		it("With leader 6km from finish, the gap should be about 2 minutes between breakaway and peloton", function () {
+			this.rm.runTo( { km: -6 });
+
+			var gap = this.rm.getTimeGapBetween(this.tt_solo, this.tt2);
+
+			expect(gap).to.be.within(1.5 * 60, 2.5 * 60);
+		});
+
 		it("Group finishes with the same time", function () {
+			// group speeds up to catch breakaway rider
+			this.rm.setGroupEffort(this.tt2, { power: 520 });
+
+			this.rm.runToFinish();
+
+			this.tt_solo.showStats();
+			this.tt2.showStats();
+			this.tt3.showStats();
+			this.tt4.showStats();
+			this.tt5.showStats();
+
 			expect(this.tt2.getTime()).to.equal(this.tt3.getTime()).and.equal(this.tt4.getTime()).and.equal(this.tt5.getTime());
 		});
 
+		it("Group riders don't use up as much energy as the solo rider", function () {
+			expect(this.tt2.getFuelPercent()).to.be.above(this.tt_solo.getFuelPercent());
+			expect(this.tt3.getFuelPercent()).to.be.above(this.tt_solo.getFuelPercent());
+			expect(this.tt4.getFuelPercent()).to.be.above(this.tt_solo.getFuelPercent());
+			expect(this.tt5.getFuelPercent()).to.be.above(this.tt_solo.getFuelPercent());
+		});
+
 		it("Breakaway rider gets caught by group", function () {
-			this.tt.showStats();
-
-			this.tt2.showStats();
-
-			console.log("****");
+			expect(this.tt2.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
+			expect(this.tt3.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
+			expect(this.tt4.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
+			expect(this.tt5.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 		});
 	});
 
-	describe("Long Flat Stage", function () {
+	describe("Refueling and Redzoning", function () {
 		var flat_course, tt, sprinter;
 
 		before(function () {
-			console.log("start long flat stage");
-
 			this.rm = new RaceManager();
 			this.rm2 = new RaceManager();
 
@@ -561,9 +581,6 @@ describe("Grand Tour", function () {
 		});
 
 		it("Redzone penalty (ie, exerting with no fuel) is costly, about a minute in final 5k", function () {
-			this.climber.showStats();
-			this.climber_nopenalty.showStats();
-
 			this.climber.getRedzoneCount().should.be.above(100);
 			this.climber_nopenalty.getRedzoneCount().should.equal(0);
 
@@ -577,6 +594,10 @@ describe("Grand Tour", function () {
 		});
 
 		it("Downhill sections have difficulty ratings and hairpin-like sections", function () {
+
+		});
+
+		it("A group that's cooperating is faster than a group that's not", function () {
 
 		});
 		*/

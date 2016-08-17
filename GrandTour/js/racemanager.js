@@ -1,4 +1,4 @@
-define(["underscore"], function (_) {
+define(["underscore", "group"], function (_, Group) {
 	function RaceManager (options) {
 		this.options = options != undefined ? options : {};
 
@@ -6,6 +6,8 @@ define(["underscore"], function (_) {
 
 		this.riders = [];
 		this.time = 0;
+
+		this.groups = [];
 	}
 
 	RaceManager.prototype = {
@@ -73,7 +75,18 @@ define(["underscore"], function (_) {
 				var map = me.map;
 				var gradient = map.getGradientAtDistance(d);
 
-				if (!rider.isFinished() && !rider.isInGroup()) {
+				if (!rider.isFinished() && !rider.isBehindGroupLeader()) {
+					if (rider.isGroupLeader()) {
+						var group = me.findGroupWith(rider);
+						if (group) {
+							var groupPowerSetting = group.getPowerSetting();
+							rider.setEffort({ power: groupPowerSetting });
+						} else {
+							// ERROR!
+							debugger;
+						}
+					}
+
 					rider.step(gradient, distanceToFinish);
 
 					if (rider.getDistance() >= thisMapDistance) {
@@ -94,8 +107,11 @@ define(["underscore"], function (_) {
 				var map = me.map;
 				var gradient = map.getGradientAtDistance(d);
 
-				if (!rider.isFinished() && rider.isInGroup()) {
-					rider.stepWithLeader(gradient);
+				if (!rider.isFinished() && rider.isBehindGroupLeader()) {
+					var group = me.findGroupWith(rider);
+					var groupPowerSetting = group.getPowerSetting();
+
+					rider.stepWithLeader(gradient, groupPowerSetting);
 
 					if (rider.getDistance() >= thisMapDistance) {
 						rider.setFinished(true);
@@ -107,6 +123,8 @@ define(["underscore"], function (_) {
 				if (!options.nogui)
 					me.updateGUI(rider, riderObj.gui);
 			});
+
+			this.stepGroups();
 
 			if (allFinished) {
 				me.stop();
@@ -124,6 +142,21 @@ define(["underscore"], function (_) {
 			}
 
 			return allFinished;
+		},
+
+		stepGroups: function () {
+			for (var i = 0; i < this.groups.length; i++) {
+				this.groups[i].step();
+			}
+		},
+
+		findGroupWith: function (rider) {
+			for (var i = 0; i < this.groups.length; i++) {
+				if (this.groups[i].hasRider(rider))
+					return this.groups[i];
+			}
+
+			return undefined;
 		},
 
 		getStageDistance: function () {
@@ -238,10 +271,66 @@ define(["underscore"], function (_) {
 			} while (leader != undefined && lead < target)
 		},
 
-		makeGroup: function (riderArray) {
+		makeGroup: function (options) {
+			var riderArray = options.members;
+
 			for (var i = 0; i < riderArray.length; i++) {
 				var rider = riderArray[i];
 				rider.setGroupLeader(riderArray[0]);
+			}
+
+			var g = new Group(options);
+
+			this.groups.push(g);
+		},
+
+		dropFromGroup: function (rider) {
+			for (var i = 0; i < this.groups.length; i++) {
+				var group = this.groups[i];
+				if (group.hasRider(rider)) {
+					group.dropRider(rider);
+
+					// if there's only one other person in this group, disband the group
+					var sz = group.getSize();
+					if (group.getSize() == 1) {
+						this.disbandGroup(group);
+						break;
+					}
+				}
+			}
+		},
+
+		disbandGroup: function (group) {
+			for (var i = 0; i < this.groups.length; i++) {
+				if (this.groups[i] == group) {
+					group.disband();
+					this.groups.splice(i, 1);
+					break;
+				}
+			}
+		},
+
+		// TODO: is there a more sophisticated way of doing this?
+		getTimeGapBetween: function (rider1, rider2) {
+			var gap;
+
+			var d1 = rider1.getDistance();
+			var d2 = rider2.getDistance();
+			var d = d1 - d2;
+			if (d > 0) {
+				var sp = rider2.getCurrentSpeed();
+				gap = d / rider2.getCurrentSpeed();
+			} else {
+				gap = -d / rider1.getCurrentSpeed();
+			}
+
+			return gap;
+		},
+
+		setGroupEffort: function (member, options) {
+			var group = this.findGroupWith(member);
+			if (group) {
+				group.setEffort(options);
 			}
 		}
 	};

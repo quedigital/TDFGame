@@ -1,4 +1,6 @@
 define(["d3"], function (d3) {
+	var LOOKUP_STARTING_POWER = 200;
+
 	// from https://mycurvefit.com/
 	// for max power output (fits Andrei Greipel's numbers from the Tour of Flanders)
 	// 2s   5s   60s    300s  1200s   6hrs (21600s)
@@ -120,6 +122,7 @@ define(["d3"], function (d3) {
 			this.currentSpeed = 0;
 			this.totalPowerSpent = 0;
 			this.redzone_count = 0;
+			this.cooperating = true;
 
 			this.recoveryMultiplier = this.getMultiplierForPower(this.options.recovery);
 
@@ -131,6 +134,12 @@ define(["d3"], function (d3) {
 			this.maxfuel = this.fueltank = ftp - recover;
 
 			this.group = undefined;
+
+			this.stats = { pulls: 0 };
+
+			this.powerLookup = {};
+
+			this.createPowerLookup();
 		},
 
 		getDistance: function () {
@@ -176,30 +185,37 @@ define(["d3"], function (d3) {
 		},
 
 		isGroupLeader: function () {
-			return this.groupLeader == this;
-		},
-
-		isBehindGroupLeader: function () {
-			return (this.groupLeader != undefined && this.groupLeader != this);
-		},
-
-		powerStep: function (power, gradient, distanceToFinish) {
-			this.accelerateTo(power);
-
-			var interval = this.updateDistance(gradient, distanceToFinish);
-
-			this.updateFuel();
-
-			this.totalPowerSpent += this.currentPower;
-
-			this.time += interval;
+			return this.group && this.group.getGroupLeader() == this;
 		},
 
 		// step 1 second
 		step: function (gradient, distanceToFinish) {
 			var desiredPower = this.options.maxPower * this.effort;
 
-			this.powerStep(desiredPower, gradient, distanceToFinish);
+			this.accelerateTo(desiredPower);
+
+			var distanceCovered = this.getDistanceFromPower(this.currentPower, gradient);
+
+			// TODO: average from last time interval for better smoothing?
+			//var actual_speed = (distanceCovered + this.currentSpeed) * .5;
+
+			var actual_speed = distanceCovered;
+
+			var timeInterval = 1.0;
+
+			if (actual_speed > distanceToFinish) {
+				this.distance += distanceToFinish;
+				timeInterval = distanceToFinish / actual_speed;
+			} else
+				this.distance += actual_speed;
+
+			this.currentSpeed = actual_speed;
+
+			this.updateFuel();
+
+			this.totalPowerSpent += this.currentPower;
+
+			this.time += timeInterval;
 		},
 
 		accelerateTo: function (desired) {
@@ -213,12 +229,12 @@ define(["d3"], function (d3) {
 				//this.currentPower *= fatigue;
 
 			} else if (this.currentPower > desired) {
-				// TODO: decelerating is immediate?
+				// decelerating is immediate?
 				this.currentPower = desired;
 			}
 		},
 
-		getSpeedFromPower: function (power, gradient) {
+		getDistanceFromPower: function (power, gradient) {
 			// P = Kr M s + Ka A s v^2 d + g i M s
 			// from http://theclimbingcyclist.com/gradients-and-cycling-how-much-harder-are-steeper-climbs/
 
@@ -254,37 +270,6 @@ define(["d3"], function (d3) {
 			return flat + climb + descend;
 		},
 
-		updateDistance: function (gradient, distanceToFinish) {
-			var timeInterval = 1;
-
-			if (this.isBehindGroupLeader()) {
-				// TODO: this shouldn't be automatic
-				this.distance = this.groupLeader.getDistance();
-
-				this.currentSpeed = this.groupLeader.currentSpeed;
-
-				timeInterval = this.groupLeader.timeInterval;
-			} else {
-				// distance takes gradient, muscle fibers, weight into account
-				var speed = this.getSpeedFromPower(this.currentPower, gradient);
-
-				// average with last speed?
-				var actual_speed = (speed + this.currentSpeed) * .5;
-
-				if (actual_speed > distanceToFinish) {
-					this.distance += distanceToFinish;
-					timeInterval = distanceToFinish / actual_speed;
-				} else
-					this.distance += actual_speed;
-
-				this.currentSpeed = actual_speed;
-			}
-
-			this.timeInterval = timeInterval;
-
-			return timeInterval;
-		},
-
 		getMultiplierForPower: function (power) {
 			//return Math.max(1, 2950797 + (-3.999958 - 2950797)/(1 + Math.pow(power / 177029800, 1.000008)));
 
@@ -298,8 +283,9 @@ define(["d3"], function (d3) {
 
 			var powerDelta = Math.max(0, this.currentPower) * multiplier;
 
+			// drafting! had to tweak this to make drafting more effective
 			if (this.isInGroup() && !this.isGroupLeader()) {
-				powerDelta *= .8;
+				powerDelta *= .70;
 			}
 
 			this.fueltank -= powerDelta;
@@ -349,8 +335,9 @@ define(["d3"], function (d3) {
 
 		setEffort: function (val) {
 			if (val instanceof Object) {
-				if (val.power)
+				if (val.power) {
 					this.effort = val.power / this.options.maxPower;
+				}
 			} else {
 				this.effort = val;
 			}
@@ -401,6 +388,9 @@ define(["d3"], function (d3) {
 		showStats: function () {
 			var s = this.options.name + ": " + this.getTimeAsString() + " @ " + this.getDistance() + "km " + Math.round(this.getFuelPercent()) + "% (" + Math.round(this.getAverageSpeed()) + "kmh, " + Math.round(this.getAveragePower()) + " watts)";
 			console.log(s);
+
+			// tracks: pulls at front
+			//console.log(this.stats);
 		},
 
 		getCurrentPower: function () {
@@ -409,6 +399,51 @@ define(["d3"], function (d3) {
 
 		getDesiredPower: function () {
 			return this.options.maxPower * this.effort;
+		},
+
+		setCooperating: function (coop) {
+			this.cooperating = coop;
+		},
+
+		isCooperating: function () {
+			return this.cooperating;
+		},
+
+		createPowerLookup: function () {
+			// gradient is multiplied by 100 (ie, .12 => 12)
+			for (var gradient = -12; gradient <= 12; gradient += 1) {
+				var array = [];
+
+				for (var power = LOOKUP_STARTING_POWER; power < this.options.maxPower; power += 10) {
+					var distance = this.getDistanceFromPower(power, gradient / 100);
+					array.push(distance);
+				}
+
+				this.powerLookup[gradient] = array;
+			}
+		},
+
+		lookupPowerForDistance: function (distance, gradient) {
+			// round gradient to nearest tenth
+			var g = Math.round(gradient * 1000 / 100);
+
+			var chart = this.powerLookup[g];
+
+			if (chart == undefined) {
+				debugger;
+				console.log("No lookup found for gradient " + gradient);
+			}
+
+			for (var i = 0; i < chart.length; i++) {
+				var d = chart[i];
+				if (d >= distance) {
+					return LOOKUP_STARTING_POWER + (i * 10);
+				}
+			}
+
+			// off the charts power requirement, give 'em max power
+
+			return this.options.maxPower;
 		}
 	};
 

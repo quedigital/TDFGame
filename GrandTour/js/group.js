@@ -41,8 +41,9 @@ define([], function () {
 			}
 
 			leader.step(gradient, distanceToFinish);
+			leader.stats.pulls++;
 
-			var pos = this.getAveragePosition();
+			var pos = this.getGroupPosition();
 
 			for (var i = 0; i < this.options.members.length; i++) {
 				var rider = this.options.members[i];
@@ -51,7 +52,7 @@ define([], function () {
 					distanceToFinish = thisMapDistance - d;
 					gradient = raceManager.getGradientAtDistance(d);
 
-					this.getRiderTo(rider, pos);
+					this.adjustPowerToMaintainPosition(rider, pos, gradient);
 
 					rider.step(gradient, distanceToFinish);
 				}
@@ -76,7 +77,18 @@ define([], function () {
 		},
 
 		switchLeaders: function () {
-			this.currentLeaderIndex = (this.currentLeaderIndex + 1) % this.options.members.length;
+			// find next cooperating rider (or stay with this leader if no one is cooperating)
+			for (var i = 1; i < this.options.members.length; i++) {
+				var temp = (this.currentLeaderIndex + i) % this.options.members.length;
+				var rider = this.options.members[temp];
+				if (rider.isCooperating()) {
+					this.currentLeaderIndex = temp;
+					if (rider.options.name.substr(0, 1) == "B") {
+						//console.log("switching to " + temp);
+					}
+					break;
+				}
+			}
 		},
 
 		disband: function () {
@@ -108,36 +120,66 @@ define([], function () {
 			}
 		},
 
-		getRiderTo: function (rider, distance) {
+		adjustPowerToMaintainPosition: function (rider, distance, gradient) {
 			// TODO: smooth these out using better logic, easing, etc.
-			var d1 = rider.getDistance();
+			var d0 = rider.getDistance();
 
-			var sp1 = rider.getCurrentSpeed();
-			var p1 = rider.getCurrentPower();
+			var diff = distance - d0;
 
-			if (d1 + (sp1 *.9) < distance) {
-				var new_power = Math.round(p1 + 30);
-				rider.setEffort({ power: new_power });
-				if (rider.options.name.substr(0, 3) == "GTT") {
-					//console.log("upping to " + new_power);
-				}
-			} else if (d1 + (sp1 * 2) > distance) {
-				var new_power = Math.round(p1 - 10);
-				rider.setEffort({ power: new_power });
-				if (rider.options.name.substr(0, 3) == "GTT") {
-					//console.log("coasting to " + new_power);
-				}
+			if (diff > 0) {
+				var power = rider.lookupPowerForDistance(diff, gradient);
+				rider.setEffort({ power: power });
+			} else {
+				// slow down?
+				rider.setEffort({ power: 0 });
 			}
 		},
 
-		getAveragePosition: function () {
+		// this is a tricky function; it determines a lot of the energy expenditure of groups
+		// I'm trying now to define the group's position as the current leader's position
+		// group's position is defined by max position, with a bit of the group's average position factored in too
+		// with a balance between riders expending too much effort to "get to the front"
+		getGroupPosition: function () {
 			var total = 0;
 
 			for (var i = 0; i < this.options.members.length; i++) {
 				total += this.options.members[i].getDistance();
 			}
 
-			return (total / this.options.members.length);
+			var avg = total / this.options.members.length;
+
+			var max = undefined;
+			for (var i = 0; i < this.options.members.length; i++) {
+				var d = this.options.members[i].getDistance();
+				if (d > max || max == undefined) {
+					max = d;
+				}
+			}
+
+			//return this.getGroupLeader().getDistance();
+			//return max * .995 + avg * 0.005;
+			//return max * .3 + avg * .7;
+			return avg;
+		},
+
+		// in meters
+		getDistanceBetween: function () {
+			var min = undefined, max = undefined;
+			for (var i = 0; i < this.options.members.length; i++) {
+				var d = this.options.members[i].getDistance();
+				if (d < min || min == undefined) {
+					min = d;
+				}
+				if (d > max || max == undefined) {
+					max = d;
+				}
+			}
+
+			return (max - min) * 1000;
+		},
+
+		getPowerSetting: function () {
+			return this.options.effort.power;
 		}
 	};
 

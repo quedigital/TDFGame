@@ -217,7 +217,11 @@ define(["underscore", "group"], function (_, Group) {
 		},
 
 		runTo: function (opts) {
-			var target;
+			var target, time_target;
+
+			if (opts.hours) {
+				time_target = opts.hours * 60 * 60;
+			}
 
 			if (opts.meters) {
 				var dist = opts.meters;
@@ -235,12 +239,18 @@ define(["underscore", "group"], function (_, Group) {
 				target = this.getStageDistance() * (opts.percent / 100);
 			}
 
-			do {
-				this.doStep({nogui: true});
+			if (target != undefined) {
+				do {
+					this.doStep({nogui: true});
 
-				var leader = this.getLeadingRider();
-				if (leader) lead = leader.getDistance();
-			} while (leader != undefined && lead < target)
+					var leader = this.getLeadingRider();
+					if (leader) lead = leader.getDistance();
+				} while (leader != undefined && lead < target)
+			} else if (time_target != undefined) {
+				do {
+					this.doStep({nogui: true});
+				} while (this.time < time_target)
+			}
 		},
 
 		makeGroup: function (options) {
@@ -284,18 +294,23 @@ define(["underscore", "group"], function (_, Group) {
 			}
 		},
 
-		// TODO: is there a more sophisticated way of doing this?
+		// returns estimated time between (if still riding) or difference between finishing times
 		getTimeGapBetween: function (rider1, rider2) {
 			var gap;
 
-			var d1 = rider1.getDistance();
-			var d2 = rider2.getDistance();
-			var d = d1 - d2;
-			if (d > 0) {
-				var sp = rider2.getCurrentSpeed();
-				gap = d / rider2.getCurrentSpeed();
+			// TODO: is there a more sophisticated way of doing this?
+			if (!rider1.isFinished() && !rider2.isFinished()) {
+				var d1 = rider1.getDistance();
+				var d2 = rider2.getDistance();
+				var d = d1 - d2;
+				if (d > 0) {
+					var sp = rider2.getCurrentSpeed();
+					gap = d / rider2.getCurrentSpeed();
+				} else {
+					gap = -d / rider1.getCurrentSpeed();
+				}
 			} else {
-				gap = -d / rider1.getCurrentSpeed();
+				gap = Math.abs(rider1.getTimeInSeconds() - rider2.getTimeInSeconds());
 			}
 
 			return gap;

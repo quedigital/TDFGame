@@ -67,6 +67,80 @@ describe("Grand Tour", function () {
 		});
 	});
 
+	describe("Lookup tables", function () {
+		before(function () {
+			makeBasicRiders(this);
+		});
+
+		it("Lookup tables are populated and symmetrical", function () {
+			var power = 540;
+			var gradient = 0;
+
+			var distance = this.sprinter.getDistanceFromPower(power, gradient);
+
+			var powerFromLookup = this.sprinter.lookupPowerForDistance(distance, gradient);
+
+			expect(powerFromLookup).to.equal(power);
+		});
+
+		it("Gradients are rounded in the lookup chart", function () {
+			var power1 = this.sprinter.lookupPowerForDistance(.01, 0);
+			var power2 = this.sprinter.lookupPowerForDistance(.01,.08);
+			var power3 = this.sprinter.lookupPowerForDistance(.01,.1);
+
+			expect(power1).to.be.below(power2);
+			expect(power2).to.equal(power3);
+		});
+	});
+
+	describe("Real-world Performance: Flat Stage", function () {
+		before(function () {
+			this.rm = new RaceManager();
+
+			var flat_course = new Map({gradients: [[0, 0], [15, 0]]}); // 15 km, Rohan Dennis won a 13.8 km TT in 2015 with a time of 14:46, averaging about 500 watts.
+
+			makeBasicRiders(this);
+
+			this.rm.setMap(flat_course);
+
+			this.tt.setEffort({power: 500});
+			this.sprinter.setEffort({power: 465});
+
+			this.rm.addRider(this.tt);
+			this.rm.addRider(this.sprinter);
+
+			this.rm.runToFinish();
+		});
+
+		it("Flat TT performance corresponds to real-world values", function () {
+
+		});
+	});
+
+	describe("Real-world Performance: Mountain Stage", function () {
+		before(function () {
+			this.rm = new RaceManager();
+
+			var flat_course = new Map({gradients: [[0, 0], [15, 0]]}); // 15 km, Rohan Dennis won a 13.8 km TT in 2015 with a time of 14:46, averaging about 500 watts.
+
+			makeBasicRiders(this);
+
+			this.rm.setMap(flat_course);
+
+			this.tt.setEffort({power: 500});
+			this.sprinter.setEffort({power: 465});
+
+			this.rm.addRider(this.tt);
+			this.rm.addRider(this.sprinter);
+
+			this.rm.runToFinish();
+		});
+
+		it("Mountain performance corresponds to real-world values", function () {
+
+		});
+	});
+
 	describe("Flat Stage", function () {
 		var flat_course, tt, sprinter;
 
@@ -127,7 +201,7 @@ describe("Grand Tour", function () {
 			rm.addRider(this.sprinter);
 			rm.addRider(this.tt);
 
-			rm.makeGroup({ members: [this.tt, this.sprinter], effort: { power: 300 } });
+			rm.makeGroup({ members: [this.tt, this.sprinter], effort: { power: 320 } });
 
 			this.rm = rm;
 		});
@@ -135,12 +209,12 @@ describe("Grand Tour", function () {
 		it("Sprinter and TT are still together", function () {
 			this.rm.runTo({meters: -400});
 
-			(this.rm.getDistanceBetween(this.tt, this.sprinter)).should.be.below(.01);
+			(this.rm.getDistanceBetween(this.tt, this.sprinter)).should.be.below(.02);
 		});
 
 		it("Sprinter and TT have saved enough energy for sprint", function () {
-			(this.sprinter.getFuelPercent()).should.be.above(60);
-			(this.tt.getFuelPercent()).should.be.above(60);
+			(this.sprinter.getFuelPercent()).should.be.above(50);
+			(this.tt.getFuelPercent()).should.be.above(50);
 		});
 
 		it("Sprinter beats TT in final 400m", function () {
@@ -154,8 +228,8 @@ describe("Grand Tour", function () {
 			this.sprinter.getTimeInSeconds().should.be.below(this.tt.getTimeInSeconds());
 		});
 
-		it("Sprinter beats TT by about 3 seconds in last 400m", function () {
-			(this.tt.getTimeInSeconds() - this.sprinter.getTimeInSeconds()).should.be.within(2, 5);
+		it("Sprinter beats TT by about 4 seconds in last 400m", function () {
+			(this.tt.getTimeInSeconds() - this.sprinter.getTimeInSeconds()).should.be.within(3, 5);
 		});
 	});
 
@@ -417,7 +491,112 @@ describe("Grand Tour", function () {
 		});
 	});
 
-	describe("Group Versus Breakaway", function () {
+	describe("Group Dynamics", function () {
+		before(function () {
+			var rm = new RaceManager();
+			var flat_course = new Map({gradients: [[0, 0], [150, 0]]}); // 150 km flat
+
+			rm.setMap(flat_course);
+
+			var new_riders = {};
+
+			makeBasicRiders(new_riders);
+			this.tt1 = new_riders.tt;
+			this.tt1.options.name = "A1";
+
+			makeBasicRiders(new_riders);
+			this.tt2 = new_riders.tt;
+			this.tt2.options.name = "A2";
+
+			makeBasicRiders(new_riders);
+			this.tt3 = new_riders.tt;
+			this.tt3.options.name = "A3";
+
+			makeBasicRiders(new_riders);
+			this.tt4 = new_riders.tt;
+			this.tt4.options.name = "A4";
+
+			makeBasicRiders(new_riders);
+			this.tt5 = new_riders.tt;
+			this.tt5.options.name = "A5";
+
+			makeBasicRiders(new_riders);
+			this.bt1 = new_riders.tt;
+			this.bt1.options.name = "B1";
+
+			makeBasicRiders(new_riders);
+			this.bt2 = new_riders.tt;
+			this.bt2.options.name = "B2";
+
+			makeBasicRiders(new_riders);
+			this.bt3 = new_riders.tt;
+			this.bt3.options.name = "B3";
+
+			makeBasicRiders(new_riders);
+			this.bt4 = new_riders.tt;
+			this.bt4.options.name = "B4";
+
+			makeBasicRiders(new_riders);
+			this.bt5 = new_riders.tt;
+			this.bt5.options.name = "B5";
+
+			rm.addRider(this.tt1);
+			rm.addRider(this.tt2);
+			rm.addRider(this.tt3);
+			rm.addRider(this.tt4);
+			rm.addRider(this.tt5);
+
+			rm.addRider(this.bt1);
+			rm.addRider(this.bt2);
+			rm.addRider(this.bt3);
+			rm.addRider(this.bt4);
+			rm.addRider(this.bt5);
+
+			//this.bt2.setCooperating(false);
+			//this.bt3.setCooperating(false);
+			this.bt4.setCooperating(false);
+			this.bt5.setCooperating(false);
+
+			this.group1 = rm.makeGroup({members: [this.tt1, this.tt2, this.tt3, this.tt4, this.tt5], effort: {power: 300}});
+			this.group2 = rm.makeGroup({members: [this.bt1, this.bt2, this.bt3, this.bt4, this.bt5], effort: {power: 300}});
+
+			this.rm = rm;
+		});
+
+		it("Groups stay together for first hour, but running out of energy", function () {
+			this.group1.setOptions({effort: {power: 360 }});
+			this.group2.setOptions({effort: {power: 360 }});
+
+			this.rm.runTo( { hours: 1 });
+
+			expect(this.group1.getDistanceBetween()).to.be.below(35);
+			expect(this.group2.getDistanceBetween()).to.be.below(35);
+
+			expect(this.tt1.getFuelPercent()).to.be.below(90);
+			expect(this.tt2.getFuelPercent()).to.be.below(90);
+			expect(this.tt3.getFuelPercent()).to.be.below(90);
+			expect(this.tt4.getFuelPercent()).to.be.below(90);
+			expect(this.tt5.getFuelPercent()).to.be.below(90);
+		});
+
+		it("Strangely, non-cooperative groups have roughly the same distance and remaining fuel", function () {
+			var d1 = this.group1.getGroupPosition();
+			var d2 = this.group2.getGroupPosition();
+
+			expect(Math.abs(d1 - d2)).to.be.below(1);
+
+			var f1 = this.tt1.getFuelPercent() + this.tt2.getFuelPercent() + this.tt3.getFuelPercent() + this.tt4.getFuelPercent() + this.tt5.getFuelPercent();
+			var f2 = this.bt1.getFuelPercent() + this.bt2.getFuelPercent() + this.bt3.getFuelPercent() + this.bt4.getFuelPercent() + this.bt5.getFuelPercent();
+
+			expect(Math.abs(f1 - f2)).to.be.below(1);
+		});
+
+		it("But non-cooperative members have 10-15% more energy", function () {
+			expect(this.bt4.getFuelPercent() - this.bt1.getFuelPercent()).to.be.within(10, 15);
+		});
+	});
+
+	describe("Group versus Breakaway", function () {
 		before(function () {
 			var rm = new RaceManager();
 
@@ -470,73 +649,80 @@ describe("Grand Tour", function () {
 			rm.addRider(this.tt4);
 			rm.addRider(this.tt5);
 
-			this.group = rm.makeGroup({ members: [this.tt2, this.tt3, this.tt4, this.tt5], effort: { power: 400 } });
+			this.group = rm.makeGroup({ members: [this.tt2, this.tt3, this.tt4, this.tt5], effort: { power: 340 } });
 
 			this.tt_solo.setEffort({ power: 350 });
 
 			this.rm = rm;
 		});
 
-		it("Course is 95 km", function () {
+		it("Course is (rolling) 95 km", function () {
 			this.rm.getStageDistance().should.be.equal(95);
 		});
 
 		it("Group stays together after 80km", function () {
 			this.rm.runTo( { km: 80 });
 
-			expect(this.rm.getDistanceBetween(this.tt2, this.tt3)).to.be.below(.025);
-			expect(this.rm.getDistanceBetween(this.tt2, this.tt4)).to.be.below(.025);
-			expect(this.rm.getDistanceBetween(this.tt2, this.tt5)).to.be.below(.025);
+			expect(this.rm.getDistanceBetween(this.tt2, this.tt3)).to.be.below(.04);
+			expect(this.rm.getDistanceBetween(this.tt2, this.tt4)).to.be.below(.04);
+			expect(this.rm.getDistanceBetween(this.tt2, this.tt5)).to.be.below(.04);
 		});
 
-		it("With leader 8km from finish, the gap should be about 1 minute between breakaway and peloton", function () {
+		it("With 8km to the finish, the group riders should have more energy than the solo rider", function () {
 			this.rm.runTo( { km: -8 });
+
+			expect(this.tt_solo.getFuelPercent()).to.be.below(this.tt2.getFuelPercent());
+			expect(this.tt_solo.getFuelPercent()).to.be.below(this.tt3.getFuelPercent());
+			expect(this.tt_solo.getFuelPercent()).to.be.below(this.tt4.getFuelPercent());
+			expect(this.tt_solo.getFuelPercent()).to.be.below(this.tt5.getFuelPercent());
+		});
+
+		it("The gap should be less than 2 minutes between breakaway and peloton", function () {
 
 			var gap = this.rm.getTimeGapBetween(this.tt_solo, this.tt2);
 
-			expect(gap).to.be.within(.5 * 60, 1.5 * 60);
+			expect(gap).to.be.within(0, 2 * 60);
 		});
 
-		it("Group riders don't use up as much energy as the solo rider", function () {
+		it("Group riders haven't used up as much energy as the solo rider", function () {
 			expect(this.tt2.getFuelPercent()).to.be.above(this.tt_solo.getFuelPercent());
 			expect(this.tt3.getFuelPercent()).to.be.above(this.tt_solo.getFuelPercent());
 			expect(this.tt4.getFuelPercent()).to.be.above(this.tt_solo.getFuelPercent());
 			expect(this.tt5.getFuelPercent()).to.be.above(this.tt_solo.getFuelPercent());
 		});
 
-		it("Group finishes with the same time", function () {
-			this.tt_solo.showStats();
-			this.tt2.showStats();
-			this.tt3.showStats();
-			this.tt4.showStats();
-			this.tt5.showStats();
+		it("Group finishes with roughly the same time", function () {
+			// tt ups his tempo (but not so much he bonks)
+			this.tt_solo.setEffort({ power: 358 });
 
 			// group speeds up to catch breakaway rider
-
-			this.group.setOptions({ effort: { power: 625 } });
+			this.group.setOptions({ effort: { power: 620 } });
 
 			this.rm.runToFinish();
 
-			expect(this.rm.getTimeGapBetween(this.tt2, this.tt3)).to.be.below(1);
-			expect(this.rm.getTimeGapBetween(this.tt2, this.tt4)).to.be.below(1);
-			expect(this.rm.getTimeGapBetween(this.tt2, this.tt5)).to.be.below(1);
-		});
-
-		it("Breakaway rider gets caught by group", function () {
+			/*
 			this.tt_solo.showStats();
 			this.tt2.showStats();
 			this.tt3.showStats();
 			this.tt4.showStats();
 			this.tt5.showStats();
+			*/
 
+			expect(this.rm.getTimeGapBetween(this.tt2, this.tt3)).to.be.below(4);
+			expect(this.rm.getTimeGapBetween(this.tt2, this.tt4)).to.be.below(4);
+			expect(this.rm.getTimeGapBetween(this.tt2, this.tt5)).to.be.below(4);
+		});
+
+		it("Breakaway rider gets caught by group by less than 10 seconds", function () {
 			expect(this.tt2.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 			expect(this.tt3.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 			expect(this.tt4.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 			expect(this.tt5.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
+
+			expect(this.rm.getTimeGapBetween(this.tt2, this.tt_solo)).to.be.below(10);
 		});
 	});
 
-	/*
 	describe("Refueling and Redzoning", function () {
 		var flat_course, tt, sprinter;
 
@@ -609,7 +795,6 @@ describe("Grand Tour", function () {
 			(this.climber.getTimeInSeconds() - this.climber_nopenalty.getTimeInSeconds()).should.be.within(.75 * 60, 1.25 * 60);
 		});
 	});
-	*/
 
 		/*
 		it("Riders can get dropped from their groups", function () {

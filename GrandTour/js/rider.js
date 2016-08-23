@@ -92,16 +92,26 @@ define(["d3"], function (d3) {
 		return hours+':'+minutes+':'+seconds;
 	};
 
+	function getClimbingFactor (gradient) {
+		var g = Math.abs(gradient / .12);
+		return d3.easeExpOut(g);
+	}
+
+	function getDescendingFactor (gradient) {
+		var g = Math.abs(gradient) / 2.0;
+		return d3.easeExpOut(g);
+	}
+
+	var POWER_INTERVALS = [2, 5, 60, 300, 1200, 2700, 10800];
+
 	function Rider (options) {
 		this.options = options;
 
 		if (this.options.powerCurve == undefined) {
-			this.options.powerCurve = [-3.999958, 1.000008, 177029800, 2950797];
-		}
-
-		if (this.options.ftpPower == undefined) {
-			this.options.ftpPower = 384;
-			console.log("yep");
+			//this.options.powerCurve = [-3.999958, 1.000008, 177029800, 2950797];
+			// 2s, 5s, 60s, 5min, 20min, 45min, 3hrs
+			// max avg watts over 2s, 5s, etc.
+			this.options.powerCurve = [1600, 1440, 690, 456, 384, 320, 300];    // Greipel
 		}
 
 		if (this.options.redzonePenalty == undefined) {
@@ -124,14 +134,11 @@ define(["d3"], function (d3) {
 			this.redzone_count = 0;
 			this.cooperating = true;
 
+			this.setStartingFuelValues();
+
+			this.options.recovery = this.options.powerCurve[this.options.powerCurve.length - 1];
+
 			this.recoveryMultiplier = this.getMultiplierForPower(this.options.recovery);
-
-//			this.maxfuel = this.fueltank = this.options.recovery * this.recoveryMultiplier * 2 * 60;      // 20 minutes (FTP)?
-
-			var ftp = this.options.ftpPower * this.getMultiplierForPower(this.options.ftpPower) * 17 * 60;
-			var recover = this.options.recovery * this.getMultiplierForPower(this.options.recovery) * 17 * 60;
-
-			this.maxfuel = this.fueltank = ftp - recover;
 
 			this.group = undefined;
 
@@ -252,43 +259,88 @@ define(["d3"], function (d3) {
 
 			var roots = solveCubic(a, 0, c1 + c2, -power);
 
-			// NOTE: scaled gradient to make climbing "ability" more pronounced
-			var rise = Math.sin(gradient * 8), run = Math.cos(gradient * 8);
 			var dist = roots[0] / 1000;
 
-			var climb = 0, descend = 0;
+			var flat = 0, climb = 0, descend = 0;
 
-			var flat = dist * run * (.5 + .5 * this.options.flatAbility);
-			if (rise > 0)
-				climb = dist * rise * (.2 + .8 * this.options.climbingAbility);
-			else if (rise < 0) {
+			if (gradient > 0) {
+				var rise = getClimbingFactor(gradient);
+				var run = 1.0 - rise;
+				climb = dist * rise * (.1 + .9 * this.options.climbingAbility);
+				flat = dist * run * (.5 + .5 * this.options.flatAbility);
+			} else if (gradient < 0) {
 				// descending doesn't get quite the same gradient advantage as climbing, to keep speeds down
-				var descent = Math.sin(gradient * 4);
-				descend = dist * -descent * (.4 + .6 * this.options.descendingAbility);
+				var descentFactor = getDescendingFactor(gradient);
+				var run = 1.0 - descentFactor;
+				descend = dist * descentFactor * (.2 + .8 * this.options.descendingAbility);
+				flat = dist * run * (.5 + .5 * this.options.flatAbility);
+			} else {
+				flat = dist * (.5 + .5 * this.options.flatAbility);
 			}
 
 			return flat + climb + descend;
 		},
 
+		setStartingFuelValues: function () {
+			var ftp = this.options.powerCurve[4] * 20 * 60;
+			var recover = 0;//this.options.recovery * 20 * 60;
+
+			this.maxfuel = this.fueltank = 400000;//ftp - recover;
+		},
+
+		getDurationForPower: function (power) {
+			if (power > this.options.powerCurve[0]) {
+				return 1;
+			} else if (power < this.options.powerCurve[this.options.powerCurve.length - 1]) {
+				return POWER_INTERVALS[POWER_INTERVALS.length - 1];
+			}
+
+			for (var i = 0; i < this.options.powerCurve.length; i++) {
+				var p1 = this.options.powerCurve[i];
+
+				if (power >= p1) {
+					// interpolate here
+					if (i > 0) {
+						var p0 = this.options.powerCurve[i - 1];
+						var t = (power - p0) / (p1 - p0);
+						var d0 = POWER_INTERVALS[i - 1];
+						var d1 = POWER_INTERVALS[i];
+						//var duration = d0 + d3.easeSinInOut(t) * (d1 - d0);
+						var duration = d0 + d3.easeLinear(t) * (d1 - d0);
+						return duration;
+					}
+				}
+			}
+
+			// above the highest rate
+			return 1;
+		},
+
 		getMultiplierForPower: function (power) {
-			//return Math.max(1, 2950797 + (-3.999958 - 2950797)/(1 + Math.pow(power / 177029800, 1.000008)));
+			if (power == 0)
+				return 0;
 
-			var a = this.options.powerCurve[0], b = this.options.powerCurve[1], c = this.options.powerCurve[2], d = this.options.powerCurve[3];
+			var duration = this.getDurationForPower(power);
+			var recovery = this.options.recovery * duration;
 
-			return Math.max(1, d + (a - d) / (1 + Math.pow(power / c, b)));
+			var m = (this.maxfuel + recovery) / (duration * power);
+
+			if (m < 0) m = 0;
+
+			return m;
 		},
 
 		updateFuel: function () {
 			var multiplier = this.getMultiplierForPower(this.currentPower);
 
-			var powerDelta = Math.max(0, this.currentPower) * multiplier;
+			var powerScaled = Math.max(0, this.currentPower) * multiplier;
 
 			// drafting! had to tweak this to make drafting more effective
 			if (this.isInGroup() && !this.isGroupLeader()) {
-				powerDelta *= .70;
+				powerScaled *= .70;
 			}
 
-			this.fueltank -= powerDelta;
+			this.fueltank -= powerScaled;
 
 			// slower recovery after going negative
 
@@ -373,7 +425,7 @@ define(["d3"], function (d3) {
 			if (opts.percent) {
 				this.fueltank = this.maxfuel * (opts.percent / 100);
 			} else if (opts.value) {
-				this.fueltank = opts.value * this.getMultiplierForPower(opts.value) * 17 * 60;;
+				this.fueltank = opts.value * this.getMultiplierForPower(opts.value) * 17 * 60;
 			}
 		},
 

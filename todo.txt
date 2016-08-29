@@ -1,5 +1,9 @@
+// TODO: use animation library
+// TODO: how to do time-checks? [time markers?]
+// TODO: real world: mountain time trial
+// TODO: rethink redzone and fatigue: maybe energy can go negative; it just reduces your power (ie, no "redzone" counter) [based on negative fuel percentage and base power?]
+// TODO: average speed from last time interval for smoothing?
 // TODO: check flat stage time trial (from last year's TdF) for Sprinter and Climber times (to check power curves)
-// TODO: graph the power curves to make sure they look right
 // TODO: drafting only works above a specific speed?
 // TODO: numbers in breakaway increase advantage?
 // TODO: animating the group dynamics might help problem solving
@@ -67,3 +71,5 @@ rolling course
 // DONE: determine if I should be averaging speed from one step to the next or not [I turned it off; we'll have to see if animation proves it out]
 // DONE: group needs a better "effort" setting [leader "power" setting]
 // NOTE: 15-30% grade in Stage 3 of 2016 Vuelta, 1.8km, 6:30 minutes [test in place]
+// DONE: graph the power curves to make sure they look right
+// DONE: get rid of maxPower [replace with top-end of power curve]

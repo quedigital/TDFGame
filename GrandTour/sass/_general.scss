@@ -122,3 +122,23 @@ div.rider {
 		text-align: center;
 	}
 }
+
+#graph {
+	background-color: pink;
+
+	canvas {
+		background-color: red;
+	}
+}
+
+#race-view {
+	width: 800px;
+	height: 400px;
+	background-color: lightgrey;
+
+	.rider {
+		position: absolute;
+		top: 0;
+		left: 0;
+	}
+}

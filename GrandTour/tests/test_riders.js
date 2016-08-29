@@ -20,10 +20,10 @@ function makeBasicRiders (obj) {
 	var tt = new Rider({
 		name: "Time-trialer",
 		maxPower: 1200,
-		powerCurve: [1200, 1000, 600, 550, 510, 400, 330],
+		powerCurve: [1200, 1000, 630, 535, 460, 400, 330],
 		acceleration: 40,
 		weight: 70,
-		flatAbility: .8,
+		flatAbility: .88,
 		climbingAbility: .2,
 		descendingAbility:.5
 	});
@@ -31,10 +31,10 @@ function makeBasicRiders (obj) {
 	var sprinter = new Rider({
 		name: "Sprinter",
 		maxPower: 1650,
-		powerCurve: [1600, 1440, 690, 456, 384, 320, 300],
+		powerCurve: [1600, 1440, 690, 456, 384, 320, 320],
 		acceleration: 800,
 		weight: 90,
-		flatAbility: .7,
+		flatAbility: .78,
 		climbingAbility: .1,
 		descendingAbility:.7
 	});
@@ -42,11 +42,11 @@ function makeBasicRiders (obj) {
 	var climber = new Rider({
 		name: "Climber",
 		maxPower: 1100,
-		powerCurve: [1100, 900, 500, 450, 410, 390, 330],
+		powerCurve: [1100, 900, 555, 455, 415, 390, 330],
 		acceleration: 30,
 		weight: 60,
-		flatAbility: .6,
-		climbingAbility: .85,
+		flatAbility: .72,
+		climbingAbility: 1.6,
 		descendingAbility:.6
 	});
 
@@ -96,7 +96,7 @@ describe("Grand Tour", function () {
 		before(function () {
 			var rm = new RaceManager();
 
-			var flat_course = new Map({gradients: [[0, 0], [30, 0]]}); // 30 km flat
+			var flat_course = new Map({gradients: [[0, 0], [15, 0]]}); // 30 km flat
 
 			rm.setMap(flat_course);
 
@@ -111,29 +111,38 @@ describe("Grand Tour", function () {
 			rm.addRider(this.tt);
 			rm.addRider(this.custom_tt);
 
-			// tt default =             [1200, 1000, 600, 550, 510, 400, 330],
-			this.custom_tt.setPowerCurve(1200, 1000, 600, 550, 520, 410, 330);
+			// tt default =             [1200, 1000, 630, 535, 460, 400, 330]
+			this.custom_tt.setPowerCurve(1200, 1000, 660, 550, 480, 410, 330);
 
 			this.rm = rm;
 		});
 
+		it("Graph the power curves to make sure they're smooth", function () {
+			this.tt.graphPowerCurve($("#graph"), { labels: false, dots: false, color: "blue" });
+			this.sprinter.graphPowerCurve($("#graph"), { labels: false, dots: false, color: "yellow" });
+			this.climber.graphPowerCurve($("#graph"), { labels: true, dots: true, color: "green" });
+		});
+
 		it("Input a power, get a number of seconds that power could be pedaled when fresh", function () {
-			this.sprinter.getDurationForPower(456).should.equal(300);
+			this.sprinter.getDurationForPower(1600).should.equal(2);
+			//this.sprinter.getDurationForPower(456).should.equal(300);
 		});
 
 		it("Riders have different power curves, generating different power", function () {
-			this.sprinter.getMultiplierForPower(1440).should.be.within(55, 56);
-			this.sprinter.getMultiplierForPower(690).should.be.within(10, 11);
-			this.sprinter.getMultiplierForPower(456).should.be.within(3, 4);
-			this.sprinter.getMultiplierForPower(384).should.be.within(1.5, 2);
-			this.sprinter.getMultiplierForPower(300).should.be.within(1, 1.5);
+			this.sprinter.getDurationForPower(1440).should.be.within(4.5, 5.5);
+			this.sprinter.getDurationForPower(690).should.be.within(59, 61);
+			this.sprinter.getDurationForPower(456).should.be.within(299, 301);
+			this.sprinter.getDurationForPower(384).should.be.within(1199, 1201);
+			this.sprinter.getDurationForPower(300).should.be.within(10799, 10801);
 
 			this.tt.getPowerCurve().should.not.eql(this.custom_tt.getPowerCurve());
+		});
 
+		it("The Custom TT has a higher duration at 450W", function () {
 			this.tt.getMultiplierForPower(450).should.be.above(this.custom_tt.getMultiplierForPower(450));
 		});
 
-		it("A Custom TT can sustain mid-range power longer than standard TT", function () {
+		it("The Custom TT finishes sooner with higher average power (both trying for 480W)", function () {
 			this.tt.setEffort( { power: 480 } );
 			this.custom_tt.setEffort( { power: 480 } );
 
@@ -141,6 +150,10 @@ describe("Grand Tour", function () {
 
 			this.custom_tt.getTimeInSeconds().should.be.below(this.tt.getTimeInSeconds());
 			this.custom_tt.getAveragePower().should.be.within(470, 490);
+		});
+
+		it("Extreme power curve could have someone easily output 600W but maybe not other ranges", function () {
+			expect(1).to.be(0);
 		});
 	});
 
@@ -155,11 +168,14 @@ describe("Grand Tour", function () {
 
 			makeBasicRiders(this);
 
+			// tt default =      [1200, 1000, 630, 535, 460, 400, 330]
+			this.tt.setPowerCurve({ "2s": 1200, "5s": 1000, "60s": 660, "5min": 550, "20min": 475, "45min": 440, "3hrs": 330 });
+
 			this.rm.setMap(flat_course);
 
-			this.tt.setEffort({power: 520});
-			this.sprinter.setEffort({power: 403});
-			this.climber.setEffort({power: 412});
+			this.tt.setEffort({power: 493});
+			this.sprinter.setEffort({power: 396});
+			this.climber.setEffort({power: 421});
 
 			this.rm.addRider(this.tt);
 			this.rm.addRider(this.sprinter);
@@ -167,16 +183,17 @@ describe("Grand Tour", function () {
 
 			this.rm.runToFinish();
 
-			this.tt.getTimeInSeconds().should.be.within(14.5 * 60, 15.5 * 60);
-			this.tt.getAveragePower().should.be.within(490, 520);
+			this.tt.getTimeInSeconds().should.be.within(14 * 60, 15 * 60);
+			this.tt.getAveragePower().should.be.within(485, 520);
 		});
 
-		it("Sprinter finishes next, in about 17 minutes (IS THAT RIGHT?!)", function () {
-			this.sprinter.getTimeInSeconds().should.be.within(17 * 60, 18 * 60);
+		it("Greipel finishes next, in about 16:07", function () {
+			this.sprinter.getTimeInSeconds().should.be.within(16 * 60, 16.5 * 60);
 		});
 
-		it("Climber finishes last, about 20 seconds after sprinter", function () {
-			this.rm.getTimeGapBetween(this.sprinter, this.climber).should.be.within(20, 30);
+		it("Majka finishes last, in about 16:19", function () {
+			this.rm.getTimeGapBetween(this.sprinter, this.climber).should.be.within(10, 20);
+			this.sprinter.getTimeInSeconds().should.be.within(16 * 60, 16.5 * 60);
 		});
 	});
 
@@ -202,19 +219,17 @@ describe("Grand Tour", function () {
 			this.rm.addRider(this.sprinter);
 			this.rm.addRider(this.climber);
 
-			this.tt.setEffort({power: 625});
-			this.sprinter.setEffort({power: 480});
-			this.climber.setEffort({power: 441});
+			this.tt.setEffort({power: 495});
+			this.sprinter.setEffort({power: 385});
+			this.climber.setEffort({power: 446});
 
 			this.rm.runToFinish();
-
-			this.climber.showStats();
 
 			this.climber.getTimeInSeconds().should.be.within(6 * 60, 7 * 60);
 		});
 	});
 
-	describe.skip("Flat Stage", function () {
+	describe("Flat Stage", function () {
 		var flat_course, tt, sprinter;
 
 		before(function () {
@@ -230,8 +245,8 @@ describe("Grand Tour", function () {
 
 			this.rm.setMap(flat_course);
 
-			this.tt.setEffort({ power: 500 });
-			this.sprinter.setEffort({ power: 465 });
+			this.tt.setEffort({ power: 470 });
+			this.sprinter.setEffort({ power: 390 });
 			this.tt_full.setEffort(1);
 
 			this.rm.addRider(this.tt);
@@ -245,12 +260,12 @@ describe("Grand Tour", function () {
 			flat_course.getTotalDistance().should.equal(15);
 		});
 
-		it("TT average speed is between 45 and 55 km/h", function () {
-			this.tt.getAverageSpeed().should.be.within(45, 55);
+		it("TT average speed is about 56 km/h", function () {
+			this.tt.getAverageSpeed().should.be.within(55, 57);
 		});
 
 		it("Sprinter is about 2 minutes slower than TT over 15 km flat stage", function () {
-			(this.sprinter.getTimeInSeconds() - this.tt.getTimeInSeconds()).should.be.within(100, 140);
+			(this.sprinter.getTimeInSeconds() - this.tt.getTimeInSeconds()).should.be.within(1.5 * 60, 2.5 * 60);
 		});
 
 		it("Going full out is less effective than a steady rate", function () {
@@ -258,11 +273,11 @@ describe("Grand Tour", function () {
 		});
 
 		it("TT Energy at the end should be about zero", function () {
-			this.tt.getFuelPercent().should.be.below(5);
+			this.tt.getFuelPercent().should.be.below(10);
 		});
 	});
 
-	describe.skip("Sprinting Flat Stage", function () {
+	describe("Sprinting Flat Stage", function () {
 		before(function () {
 			var rm = new RaceManager();
 			var flat_course = new Map({gradients: [[0, 0], [15, 0]]}); // 15 km flat
@@ -281,6 +296,9 @@ describe("Grand Tour", function () {
 
 		it("Sprinter and TT are still together", function () {
 			this.rm.runTo({meters: -400});
+
+			this.sprinter.showStats();
+			this.tt.showStats();
 
 			(this.rm.getDistanceBetween(this.tt, this.sprinter)).should.be.below(.02);
 		});
@@ -836,6 +854,10 @@ describe("Grand Tour", function () {
 		});
 
 		it("A group that's cooperating is faster than a group that's not", function () {
+
+		});
+
+		it("Breakaways are hard to get into", function () {
 
 		});
 		*/

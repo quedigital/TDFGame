@@ -2,12 +2,15 @@ define(["underscore", "group"], function (_, Group) {
 	function RaceManager (options) {
 		this.options = options != undefined ? options : {};
 
+		this.started = false;
 		this.running = false;
 
 		this.riders = [];
 		this.time = 0;
 
 		this.groups = [];
+
+		this.views = [];
 	}
 
 	RaceManager.prototype = {
@@ -29,6 +32,10 @@ define(["underscore", "group"], function (_, Group) {
 					break;
 				}
 			}
+		},
+
+		getRiders: function () {
+			return this.riders;
 		},
 
 		setMap: function (map) {
@@ -61,6 +68,12 @@ define(["underscore", "group"], function (_, Group) {
 		},
 
 		doStep: function (options) {
+			if (!this.started) {
+				this.initializeViews();
+
+				this.started = true;
+			}
+
 			var i;
 
 			var thisMapDistance = this.getStageDistance();
@@ -99,6 +112,8 @@ define(["underscore", "group"], function (_, Group) {
 				var group = this.groups[i];
 				group.endStep();
 			}
+
+			this.updateViews();
 
 			if (allFinished) {
 				this.stop();
@@ -318,6 +333,26 @@ define(["underscore", "group"], function (_, Group) {
 
 		getDistanceBetween: function (rider1, rider2) {
 			return Math.abs(rider1.getDistance() - rider2.getDistance());
+		},
+
+		addView: function (view) {
+			this.views.push(view);
+		},
+
+		updateViews: function () {
+			var me = this;
+
+			_.each(this.views, function (view, index) {
+				view.step(me);
+			});
+		},
+
+		initializeViews: function () {
+			var me = this;
+
+			_.each(this.views, function (view, index) {
+				view.initialize(me);
+			});
 		}
 	};
 

@@ -80,6 +80,95 @@ define(["d3"], function (d3) {
 		return roots;
 	}
 
+	/* Monotone cubic spline interpolation
+	 Usage example:
+	 var f = createInterpolant([0, 1, 2, 3, 4], [0, 1, 4, 9, 16]);
+	 var message = '';
+	 for (var x = 0; x <= 4; x += 0.5) {
+	 var xSquared = f(x);
+	 message += x + ' squared is about ' + xSquared + '\n';
+	 }
+	 alert(message);
+	 */
+	var createInterpolant = function(xs, ys) {
+		var i, length = xs.length;
+
+		// Deal with length issues
+		if (length != ys.length) { throw 'Need an equal count of xs and ys.'; }
+		if (length === 0) { return function(x) { return 0; }; }
+		if (length === 1) {
+			// Impl: Precomputing the result prevents problems if ys is mutated later and allows garbage collection of ys
+			// Impl: Unary plus properly converts values to numbers
+			var result = +ys[0];
+			return function(x) { return result; };
+		}
+
+		// Rearrange xs and ys so that xs is sorted
+		var indexes = [];
+		for (i = 0; i < length; i++) { indexes.push(i); }
+		indexes.sort(function(a, b) { return xs[a] < xs[b] ? -1 : 1; });
+		var oldXs = xs, oldYs = ys;
+		// Impl: Creating new arrays also prevents problems if the input arrays are mutated later
+		xs = []; ys = [];
+		// Impl: Unary plus properly converts values to numbers
+		for (i = 0; i < length; i++) { xs.push(+oldXs[indexes[i]]); ys.push(+oldYs[indexes[i]]); }
+
+		// Get consecutive differences and slopes
+		var dys = [], dxs = [], ms = [];
+		for (i = 0; i < length - 1; i++) {
+			var dx = xs[i + 1] - xs[i], dy = ys[i + 1] - ys[i];
+			dxs.push(dx); dys.push(dy); ms.push(dy/dx);
+		}
+
+		// Get degree-1 coefficients
+		var c1s = [ms[0]];
+		for (i = 0; i < dxs.length - 1; i++) {
+			var m = ms[i], mNext = ms[i + 1];
+			if (m*mNext <= 0) {
+				c1s.push(0);
+			} else {
+				var dx_ = dxs[i], dxNext = dxs[i + 1], common = dx_ + dxNext;
+				c1s.push(3*common/((common + dxNext)/m + (common + dx_)/mNext));
+			}
+		}
+		c1s.push(ms[ms.length - 1]);
+
+		// Get degree-2 and degree-3 coefficients
+		var c2s = [], c3s = [];
+		for (i = 0; i < c1s.length - 1; i++) {
+			var c1 = c1s[i], m_ = ms[i], invDx = 1/dxs[i], common_ = c1 + c1s[i + 1] - m_ - m_;
+			c2s.push((m_ - c1 - common_)*invDx); c3s.push(common_*invDx*invDx);
+		}
+
+		// Return interpolant function
+		return function(x) {
+			// The rightmost point in the dataset should give an exact result
+			var i = xs.length - 1;
+			if (x == xs[i]) { return ys[i]; }
+
+			// Search for the interval x is in, returning the corresponding y if x is one of the original xs
+			var low = 0, mid, high = c3s.length - 1;
+			while (low <= high) {
+				mid = Math.floor(0.5*(low + high));
+				var xHere = xs[mid];
+				if (xHere < x) { low = mid + 1; }
+				else if (xHere > x) { high = mid - 1; }
+				else { return ys[mid]; }
+			}
+			i = Math.max(0, high);
+
+			// Interpolate
+			var diff = x - xs[i], diffSq = diff*diff;
+			var inter;
+			// CB: handle cases with Infinity
+			if (isFinite(c1s[i]))
+				inter = ys[i] + c1s[i]*diff + c2s[i]*diffSq + c3s[i]*diff*diffSq;
+			else
+				inter = ys[i];
+			return inter;
+		};
+	};
+
 	String.prototype.toHHMMSS = function () {
 		var sec_num = parseInt(this, 10); // don't forget the second param
 		var hours   = Math.floor(sec_num / 3600);
@@ -93,7 +182,7 @@ define(["d3"], function (d3) {
 	};
 
 	function getClimbingFactor (gradient) {
-		var g = Math.abs(gradient / .12);
+		var g = Math.abs(gradient) / 3.0;
 		return d3.easeExpOut(g);
 	}
 
@@ -108,10 +197,11 @@ define(["d3"], function (d3) {
 		this.options = options;
 
 		if (this.options.powerCurve == undefined) {
-			//this.options.powerCurve = [-3.999958, 1.000008, 177029800, 2950797];
 			// 2s, 5s, 60s, 5min, 20min, 45min, 3hrs
 			// max avg watts over 2s, 5s, etc.
-			this.options.powerCurve = [1600, 1440, 690, 456, 384, 320, 300];    // Greipel
+			this.setPowerCurve(1600, 1440, 690, 456, 384, 320, 300);    // Greipel
+		} else {
+			this.setPowerCurve(this.options.powerCurve);
 		}
 
 		if (this.options.redzonePenalty == undefined) {
@@ -136,9 +226,9 @@ define(["d3"], function (d3) {
 
 			this.setStartingFuelValues();
 
-			this.options.recovery = this.options.powerCurve[this.options.powerCurve.length - 1];
+			this.setupPowerFactors();
 
-			this.recoveryMultiplier = this.getMultiplierForPower(this.options.recovery);
+			this.options.recovery = this.options.powerCurve[this.options.powerCurve.length - 1];
 
 			this.group = undefined;
 
@@ -147,6 +237,19 @@ define(["d3"], function (d3) {
 			this.powerLookup = {};
 
 			this.createPowerLookup();
+		},
+
+		setupPowerFactors: function () {
+			var xs = [], ys = [];
+
+			for (var i = 0; i < POWER_INTERVALS.length; i++) {
+				var duration = POWER_INTERVALS[i];
+				var watts = this.options.powerCurve[i];
+				xs.push(watts);
+				ys.push(duration);
+			}
+
+			this.getInterpolant = createInterpolant(xs, ys);
 		},
 
 		getDistance: function () {
@@ -197,7 +300,7 @@ define(["d3"], function (d3) {
 
 		// step 1 second
 		step: function (gradient, distanceToFinish) {
-			var desiredPower = this.options.maxPower * this.effort;
+			var desiredPower = this.getMaxPower() * this.effort;
 
 			this.accelerateTo(desiredPower);
 
@@ -229,12 +332,12 @@ define(["d3"], function (d3) {
 			if (this.currentPower <= desired) {
 				var attemptedPower = Math.min(this.currentPower + this.options.acceleration, desired);
 
-				this.currentPower = Math.min(Math.max(0, this.fueltank), attemptedPower);
-
-				// THEORY: the less fuel you have, the slower you go (with exponential out easing)
-				//var fatigue = d3.easeExpOut(this.getFuelPercent());
-				//this.currentPower *= fatigue;
-
+				if (this.fueltank > 0) {
+					this.currentPower = Math.min(this.fueltank, attemptedPower);
+				} else {
+					// THEORY: when tank is empty, you go 95% of your recovery rate? And it gets worse?
+					this.currentPower = this.getRestingPower() * .95;
+				}
 			} else if (this.currentPower > desired) {
 				// decelerating is immediate?
 				this.currentPower = desired;
@@ -282,13 +385,30 @@ define(["d3"], function (d3) {
 		},
 
 		setStartingFuelValues: function () {
-			var ftp = this.options.powerCurve[4] * 20 * 60;
-			var recover = 0;//this.options.recovery * 20 * 60;
+			// lowest power over longest duration = starting fuel
 
-			this.maxfuel = this.fueltank = 400000;//ftp - recover;
+			var n = POWER_INTERVALS.length - 1;
+
+			this.maxfuel = this.fueltank = this.options.powerCurve[n] * POWER_INTERVALS[n];
 		},
 
 		getDurationForPower: function (power) {
+			// outside of ranges
+			if (power > this.options.powerCurve[0]) {
+				return 1;
+			} else if (power < this.options.powerCurve[this.options.powerCurve.length - 1]) {
+				return POWER_INTERVALS[POWER_INTERVALS.length - 1];
+			}
+
+			var duration = this.getInterpolant(power);
+			if (duration < 0) duration = 1;
+
+			//console.log(power + " => " + duration);
+
+			return duration;
+		},
+
+		old_getDurationForPower: function (power) {
 			if (power > this.options.powerCurve[0]) {
 				return 1;
 			} else if (power < this.options.powerCurve[this.options.powerCurve.length - 1]) {
@@ -344,20 +464,24 @@ define(["d3"], function (d3) {
 
 			// slower recovery after going negative
 
+			this.fueltank += this.options.recovery;
+
+			/*
 			if (this.fueltank >= 0 || !this.options.redzonePenalty) {
-				this.fueltank += this.options.recovery * this.recoveryMultiplier;
+				this.fueltank += this.options.recovery;
 			} else {
-				var recovery_amount = this.options.recovery * this.recoveryMultiplier;
+				var recovery_amount = this.options.recovery;
 				var redzone_factor = 1.223022*Math.pow(-this.fueltank, -0.1667914);
 				this.fueltank += recovery_amount * redzone_factor;
 				this.redzone_count++;
 			}
+			*/
 
 			this.fueltank = Math.min(this.fueltank, this.maxfuel);
 		},
 
 		getMaxPower: function () {
-			return this.options.maxPower;
+			return this.options.powerCurve[0];
 		},
 
 		getAcceleration: function () {
@@ -382,13 +506,13 @@ define(["d3"], function (d3) {
 
 		deltaEffort: function (delta) {
 			this.effort += delta;
-			this.currentPower = this.options.maxPower * this.effort;
+			this.currentPower = this.getMaxPower() * this.effort;
 		},
 
 		setEffort: function (val) {
 			if (val instanceof Object) {
 				if (val.power) {
-					this.effort = val.power / this.options.maxPower;
+					this.effort = val.power / this.getMaxPower();
 				}
 			} else {
 				this.effort = val;
@@ -412,13 +536,34 @@ define(["d3"], function (d3) {
 		},
 
 		setPowerCurve: function () {
-			for (var i = 0; i < arguments.length; i++) {
-				this.options.powerCurve[i] = arguments[i];
+			var first = arguments[0];
+			var args = Array.prototype.slice.call(arguments);
+
+			if (typeof(first) == "number") {
+				this.options.powerCurve = args.slice();
+			} else if (Array.isArray(first)) {
+				this.options.powerCurve = args[0].slice();
+			} else if (arguments instanceof Object) {
+				var ar = [];
+				ar.push(args[0]["2s"]);
+				ar.push(args[0]["5s"]);
+				ar.push(args[0]["60s"]);
+				ar.push(args[0]["5min"]);
+				ar.push(args[0]["20min"]);
+				ar.push(args[0]["45min"]);
+				ar.push(args[0]["3hrs"]);
+				this.options.powerCurve = ar.slice();
 			}
+
+			this.setupPowerFactors();
 		},
 
 		getPowerCurve: function () {
 			return this.options.powerCurve;
+		},
+
+		getRestingPower: function () {
+			return this.options.powerCurve[this.options.powerCurve.length - 1];
 		},
 
 		refuel: function (opts) {
@@ -450,7 +595,7 @@ define(["d3"], function (d3) {
 		},
 
 		getDesiredPower: function () {
-			return this.options.maxPower * this.effort;
+			return this.options.getMaxPower() * this.effort;
 		},
 
 		setCooperating: function (coop) {
@@ -466,7 +611,7 @@ define(["d3"], function (d3) {
 			for (var gradient = -12; gradient <= 12; gradient += 1) {
 				var array = [];
 
-				for (var power = LOOKUP_STARTING_POWER; power < this.options.maxPower; power += 10) {
+				for (var power = LOOKUP_STARTING_POWER; power < this.getMaxPower(); power += 10) {
 					var distance = this.getDistanceFromPower(power, gradient / 100);
 					array.push(distance);
 				}
@@ -495,7 +640,104 @@ define(["d3"], function (d3) {
 
 			// off the charts power requirement, give 'em max power
 
-			return this.options.maxPower;
+			return this.getMaxPower();
+		},
+
+		graphPowerCurve: function (dom, options) {
+			var MIN_WATTS = 300;
+			var WIDTH = 1200, HEIGHT = 800;
+
+			if (options == undefined) {
+				options = { labels: true, dots: true, color: "yellow" };
+			}
+
+			var c = dom.find("canvas");
+			if (!c.length) {
+				c = $("<canvas width='" + WIDTH + "' height='" + HEIGHT+ "'>");
+				dom.append(c);
+			}
+
+			var ctx = c[0].getContext("2d");
+
+			ctx.strokeStyle = options.color;
+			ctx.lineWidth = 5;
+
+			var max_d, min_d;
+
+			var xs = [], ys = [];
+
+			for (var i = 0; i < POWER_INTERVALS.length; i++) {
+				var duration = POWER_INTERVALS[i];
+				var watts = this.options.powerCurve[i];
+				xs.push(watts);
+				ys.push(duration);
+			}
+
+			var func = createInterpolant(xs, ys);
+
+			for (var watts = MIN_WATTS; watts <= this.getMaxPower(); watts += 100) {
+				var duration = func(watts);
+				var d = Math.log(duration);
+				if (d > max_d || max_d == undefined) max_d = d;
+				if (d < min_d || min_d == undefined) min_d = d;
+				//console.log(watts + " => " + duration);
+			}
+
+			var range_x = this.getMaxPower() - MIN_WATTS;
+			var dx = range_x / WIDTH;
+			var range_y = max_d - min_d;
+			var dy = range_y / HEIGHT;
+
+			ctx.beginPath();
+
+			for (var watts = MIN_WATTS; watts <= this.getMaxPower(); watts += 1) {
+				var duration = func(watts);
+				var d = Math.log(duration);
+
+				var x = (watts - MIN_WATTS) / dx;
+				var y = HEIGHT - (d - min_d) / dy;
+
+				if (watts == MIN_WATTS)
+					ctx.moveTo(x, y);
+				else
+					ctx.lineTo(x, y);
+			}
+
+			ctx.stroke();
+
+			ctx.beginPath();
+
+			for (var i = 0; i < POWER_INTERVALS.length; i++) {
+				var duration = POWER_INTERVALS[i];
+				var watts = this.options.powerCurve[i];
+				var d = Math.log(duration);
+
+				var x = (watts - MIN_WATTS) / dx;
+				var y = HEIGHT - (d - min_d) / dy;
+
+				if (options.dots) {
+					ctx.fillStyle = "green";
+
+					ctx.arc(x, y, 10, 0, Math.PI * 2, false);
+					ctx.fill();
+					ctx.closePath();
+				}
+
+				if (options.labels) {
+					ctx.fillStyle = "black";
+
+					var txt = duration + "s @ " + watts + "W";
+					ctx.font = "bold 10px Arial";
+					var w = ctx.measureText(txt).width;
+					if (i == 0) {
+						ctx.fillText(txt, x - w, y - 20);
+					} else if (i == POWER_INTERVALS.length - 1) {
+						ctx.fillText(txt, x, y + 20);
+					} else {
+						ctx.fillText(txt, x - w * .5, y + 20);
+					}
+				}
+			}
 		}
 	};
 

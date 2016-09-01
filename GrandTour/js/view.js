@@ -2,6 +2,8 @@ define(function () {
 		function View (ui) {
 			this.ui = ui;
 
+			this.ui.empty();
+
 			return (this);
 		}
 

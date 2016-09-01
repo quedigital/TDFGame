@@ -1,4 +1,8 @@
 define(["underscore", "group"], function (_, Group) {
+	function sortByTime (a, b) {
+		return a.time > b.time;
+	}
+
 	function RaceManager (options) {
 		this.options = options != undefined ? options : {};
 
@@ -11,23 +15,20 @@ define(["underscore", "group"], function (_, Group) {
 		this.groups = [];
 
 		this.views = [];
+
+		this.frameInterval = 10;
+		this.currentFrameInterval = 0;
+		this.frameDelay = 0;
 	}
 
 	RaceManager.prototype = {
-		addRider: function (rider, gui) {
-			this.riders.push({ rider: rider, gui: gui });
-
-			if (gui) {
-				$(gui).find(".slower").click($.proxy(this.onClickSlower, this, rider));
-				$(gui).find(".faster").click($.proxy(this.onClickFaster, this, rider));
-
-				this.updateUI();
-			}
+		addRider: function (rider) {
+			this.riders.push(rider);
 		},
 
 		removeRider: function (rider) {
-			for (var i = 0; i < this.riders; i++) {
-				if (this.riders[i].rider == rider) {
+			for (var i = 0; i < this.riders.length; i++) {
+				if (this.riders[i] == rider) {
 					this.riders.splice(i, 1);
 					break;
 				}
@@ -60,11 +61,9 @@ define(["underscore", "group"], function (_, Group) {
 			this.time = 0;
 			this.running = false;
 
-			_.each(this.riders, function (riderObj, index) {
-				riderObj.rider.reset();
+			_.each(this.riders, function (rider, index) {
+				rider.reset();
 			});
-
-			this.updateUI();
 		},
 
 		doStep: function (options) {
@@ -81,7 +80,7 @@ define(["underscore", "group"], function (_, Group) {
 			var allFinished = true;
 
 			for (i = 0; i < this.riders.length; i++) {
-				var rider = this.riders[i].rider;
+				var rider = this.riders[i];
 
 				if (!rider.isFinished()) {
 					if (rider.isInGroup()) {
@@ -103,9 +102,6 @@ define(["underscore", "group"], function (_, Group) {
 						allFinished = false;
 					}
 				}
-
-				if (!options.nogui)
-					this.updateGUI(rider, riderObj.gui);
 			}
 
 			for (i = 0; i < this.groups.length; i++) {
@@ -126,8 +122,9 @@ define(["underscore", "group"], function (_, Group) {
 					this.options.stepCallback();
 				}
 
-				if (options.automatic)
+				if (options.automatic) {
 					setTimeout($.proxy(this.doStep, this), 100, options);
+				}
 			}
 
 			return allFinished;
@@ -155,7 +152,7 @@ define(["underscore", "group"], function (_, Group) {
 			var max, max_rider;
 
 			for (var i = 0; i < this.riders.length; i++) {
-				var rider = this.riders[i].rider;
+				var rider = this.riders[i];
 				if (rider.getDistance() > max || max == undefined) {
 					max = rider.getDistance();
 					max_rider = rider;
@@ -169,102 +166,98 @@ define(["underscore", "group"], function (_, Group) {
 			return this.time;
 		},
 
-		updateUI: function () {
-			var me = this;
-			_.each(this.riders, function (riderObj, index) {
-				var rider = riderObj.rider;
-				me.updateGUI(rider, riderObj.gui);
-			});
-		},
+		runToFinish: function (opts) {
+			if (opts && opts.callback) {
+				// sync
+				this.target = {callback: opts ? opts.callback : undefined};
 
-		updateGUI: function (rider, gui) {
-			$(gui).find("h4").text(rider.options.name);
+				this.runToTarget();
+			} else {
+				this.target = {};
 
-			var stats = $(gui).find(".stats");
-			if (stats) {
-				var p = $("<p>", { text: "maxPower: " + rider.getMaxPower() });
-				p.append($("<p>", { text: "accel: " + rider.getAcceleration() }));
-				p.append($("<p>", { text: "recovery: " + rider.getRecovery() }));
-
-				stats.html(p.html());
+				// async
+				do {
+					var finished = this.doStep();
+				} while (!finished);
 			}
-
-			this.setBarGraph($(gui).find(".effort"), rider.getEffort(), 1.0, { round: true });
-			this.setBarGraph($(gui).find(".power"), rider.getPower(), 1000);
-			this.setBarGraph($(gui).find(".fuel"), rider.getFuelPercent(), 1.0, { percent: true });
-			if (this.map) {
-				this.setBarGraph($(gui).find(".distance"), rider.getDistance(), this.map.getTotalDistance());
-			}
-		},
-
-		setBarGraph: function (el, val, max, opts) {
-			var pct = (val / max) * 100;
-			el.width(pct + "%");
-
-			var s;
-
-			if (opts == undefined) opts = {};
-
-			if (opts.round)
-				s = Math.floor(val * 100) / 100;
-			else if (opts.percent)
-				s = Math.floor(val * 100);
-			else
-				s = Math.floor(val);
-
-			el.find(".label").text(s);
-		},
-
-		onClickSlower: function (rider, event) {
-			rider.deltaEffort(-.1);
-			this.updateUI();
-		},
-
-		onClickFaster: function (rider, event) {
-			rider.deltaEffort(.1);
-			this.updateUI();
-		},
-
-		runToFinish: function () {
-			do {
-				var finished = this.doStep({nogui: true});
-			} while (!finished);
 		},
 
 		runTo: function (opts) {
 			var target, time_target;
 
 			if (opts.hours) {
-				time_target = opts.hours * 60 * 60;
+				this.target = { time: opts.hours * 60 * 60 };
 			}
 
 			if (opts.meters) {
 				var dist = opts.meters;
-				if (dist < 0)
-					target = this.getStageDistance() + (dist / 1000);
-				else
-					target = dist / 1000;
+				if (dist < 0) {
+					this.target = { meters: this.getStageDistance() + (dist / 1000) };
+				} else {
+					this.target = { meters: dist / 1000 };
+				}
 			} else if (opts.km) {
 				var dist = opts.km;
-				if (dist < 0)
-					target = this.getStageDistance() + dist;
-				else
-					target = dist;
+				if (dist < 0) {
+					this.target = { km: this.getStageDistance() + dist };
+				} else {
+					this.target = { km: dist };
+				}
 			} else if (opts.percent) {
-				target = this.getStageDistance() * (opts.percent / 100);
+				this.target = { meters: this.getStageDistance() * (opts.percent / 100) };
 			}
 
-			if (target != undefined) {
-				do {
-					this.doStep({nogui: true});
+			this.target.callback = opts.callback;
 
-					var leader = this.getLeadingRider();
-					if (leader) lead = leader.getDistance();
-				} while (leader != undefined && lead < target)
-			} else if (time_target != undefined) {
-				do {
-					this.doStep({nogui: true});
-				} while (this.time < time_target)
+			this.runToTarget(opts);
+		},
+
+		targetReached: function () {
+			if (this.target.meters) {
+				var leader = this.getLeadingRider();
+				if (leader) lead = leader.getDistance();
+
+				if (leader != undefined && lead >= this.target.meters) return true;
+			} else if (this.target.km) {
+				var leader = this.getLeadingRider();
+				if (leader) lead = leader.getDistance();
+
+				if (leader != undefined && lead >= this.target.km) return true;
+			} else if (this.target.time) {
+				if (this.time >= this.target.time) return true;
+			}
+
+			return false;
+		},
+
+		runToTarget: function () {
+			var allFinished = false;
+
+			if (!this.targetReached()) {
+				allFinished = this.doStep();
+			} else {
+				allFinished = true;
+			}
+
+			if (!allFinished) {
+				var doTimeout = false;
+				this.currentFrameInterval++;
+				if (this.currentFrameInterval >= this.frameInterval) {
+					doTimeout = true;
+					this.currentFrameInterval = 0;
+				}
+
+				if (this.target.callback && doTimeout) {
+					// async
+					setTimeout($.proxy(this.runToTarget, this), this.frameDelay);
+				} else {
+					// sync
+					this.runToTarget();
+				}
+			} else {
+				if (this.target.callback) {
+					this.target.callback();
+				}
 			}
 		},
 
@@ -309,8 +302,50 @@ define(["underscore", "group"], function (_, Group) {
 			}
 		},
 
-		// returns estimated time between (if still riding) or difference between finishing times
 		getTimeGapBetween: function (rider1, rider2) {
+			var r1 = Math.floor(rider1.getDistance());
+			var r2 = Math.floor(rider2.getDistance());
+			var t1, t2;
+
+			if (r1 >= r2) {
+				t1 = rider1.getTimeAt(r2);
+				t2 = rider2.getTimeAt(r2);
+			} else {
+				t1 = rider1.getTimeAt(r1);
+				t2 = rider2.getTimeAt(r1);
+			}
+
+			return t2 - t1;
+		},
+
+		getRiderAverageSpeedBetween: function (rider, distance1, distance2) {
+			var d1, d2;
+
+			if (distance1 < 0) {
+				d1 = this.getStageDistance() + distance1;
+				if (distance2 == 0) {
+					d2 = this.getStageDistance();
+				} else if (distance2 < 0) {
+					d2 = this.getStageDistance() + distance2;
+				} else {
+					d2 = distance2;
+				}
+			} else {
+				d1 = distance1;
+
+				if (distance2 < 0) {
+					d2 = this.getStageDistance() + distance2;
+				} else if (distance2 == 0) {
+					d2 = this.getStageDistance();
+				} else
+					d2 = distance2;
+			}
+
+			return rider.getAverageSpeedBetween(d1, d2);
+		},
+
+		// returns estimated time between (if still riding) or difference between finishing times
+		getTimeGapBetween_old: function (rider1, rider2) {
 			var gap;
 
 			// TODO: is there a more sophisticated way of doing this?
@@ -353,6 +388,21 @@ define(["underscore", "group"], function (_, Group) {
 			_.each(this.views, function (view, index) {
 				view.initialize(me);
 			});
+		},
+
+		getLeaderColor: function () {
+			var v = this.views[0];
+			if (v) {
+				var rider = this.getLeadingRider();
+				return v.getColorForRider(rider);
+			}
+
+			return undefined;
+		},
+
+		getStageFinishOrder: function () {
+			var riders = this.riders.slice();
+			return riders.sort(sortByTime);
 		}
 	};
 

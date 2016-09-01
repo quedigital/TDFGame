@@ -1,14 +1,18 @@
 // Define the Friend model class. This extends the core Model.
-define(["./view"], function (View) {
+define(["./view", "easeljs"], function (View) {
 		// I return an initialized object.
 		function TopView (ui) {
 			// Call the super constructor.
 			View.call(this, ui);
 
-			// Store the name.
-			this._name = name;
+			this.canvas = $("<canvas width=" + ui.width() + " height = " + ui.height() + ">");
+			this.ui.append(this.canvas);
 
-			// Return this object reference.
+			this.stage = new createjs.Stage(this.canvas[0]);
+
+			this.zoom = 10;
+			this.focus = {};
+
 			return (this);
 		}
 
@@ -23,13 +27,51 @@ define(["./view"], function (View) {
 			initialize: function (rm) {
 				var riders = rm.getRiders();
 
+				this.riderStats = [];
+
 				var me = this;
 
-				_.each(riders, function (rider, index) {
-					var nick = rider.rider.options.name.substr(0, 1).toUpperCase();
+				var colors = ["red", "green", "DeepSkyBlue"];
 
-					var r = $("<span>", { text: nick, class: "rider" }).attr("data-index", index);
-					me.ui.append(r);
+				_.each(riders, function (rider, index) {
+					var nick = rider.options.name.substr(0, 1).toUpperCase();
+
+					var c = colors[index % colors.length];
+
+					var container = new createjs.Container();
+
+					var circle = new createjs.Shape();
+					circle.graphics.beginFill(c).drawCircle(0, 0, 10);
+					circle.x = 0;
+					circle.y = 0;
+					container.addChild(circle);
+
+					var text = new createjs.Text(nick, "20px Arial", "white");
+					text.textBaseline = "middle";
+					text.textAlign = "center";
+					container.addChild(text);
+
+					var fuel = new createjs.Text("100%", "10px Arial", "red");
+					fuel.textBaseline = "top";
+					fuel.textAlign = "center";
+					fuel.y = 10;
+					container.addChild(fuel);
+
+					var power = new createjs.Text("1000W", "10px Arial", "blue");
+					power.textBaseline = "top";
+					power.textAlign = "center";
+					power.y = 20;
+					container.addChild(power);
+
+					var line4 = new createjs.Text("", "10px Arial", "black");
+					line4.textBaseline = "top";
+					line4.textAlign = "center";
+					line4.y = 30;
+					container.addChild(line4);
+
+					me.stage.addChild(container);
+
+					me.riderStats.push({ graphic: container, color: c, rider: rider, fuelText: fuel, label: text, powerText: power, line4: line4 });
 				});
 			},
 
@@ -38,15 +80,61 @@ define(["./view"], function (View) {
 
 				var me = this;
 
-				var WIDTH = 800;
-				var TOTAL_DISTANCE = 15;
+				var WIDTH = this.ui.width();
+				var STAGE_DISTANCE = rm.getStageDistance();
+
+				var center_distance = 0;
+
+				var ratio = WIDTH / STAGE_DISTANCE * this.zoom;
+				var center = WIDTH * .5 / STAGE_DISTANCE / this.zoom * 10;
+
+				if (this.focus) {
+					if (this.focus.group) {
+						center_distance = this.focus.group.getGroupAveragePosition() - center;//.45
+					} else if (this.focus.rider) {
+						center_distance = this.focus.rider.getDistance() - center;
+					}
+				}
 
 				_.each(riders, function (rider, index) {
-					var r_ui = me.ui.find(".rider[data-index=" + index + "]");
-					var x = rider.rider.getDistance() / TOTAL_DISTANCE * WIDTH;
+					var riderGraphic = me.riderStats[index].graphic;
+					//var x = (rider.getDistance() - center_distance) / STAGE_DISTANCE * WIDTH * me.zoom;
+					var x = (rider.getDistance() - center_distance) * ratio;
 
-					r_ui.css("left", x);
+					riderGraphic.x = x;
+					riderGraphic.y = 100 + index * 55;
+
+					var nick = rider.options.name.substr(0, 1).toUpperCase();
+					me.riderStats[index].label.text = rider.isGroupLeader() ? nick + "*" : nick;
+					//me.riderStats[index].fuelText.text = Math.round(rider.getFuelPercent()) + "%";
+					//me.riderStats[index].fuelText.text = Math.round(rider.getDistance() * 100) / 100;
+					//me.riderStats[index].fuelText.text = Math.round(rider.getCurrentSpeedInKMH());
+					me.riderStats[index].fuelText.text = rider.extra;
+					//me.riderStats[index].powerText.text = Math.round(rider.getCurrentPower()) + "W";
+					//me.riderStats[index].powerText.text = rider.orderInGroup + " @ " + Math.round(rider.getCurrentPower()) + "W";;
+					//me.riderStats[index].powerText.text = rider.currentGradient;
+					me.riderStats[index].powerText.text = Math.round(rider.getDistance() * 1000);
+
+					me.riderStats[index].line4.text = rider.orderInGroup + " @ " + Math.round(rider.getCurrentPower()) + "W";
 				});
+
+				this.stage.update();
+			},
+
+			getColorForRider: function (rider) {
+				for (var i = 0; i < this.riderStats.length; i++) {
+					if (this.riderStats[i].rider == rider) {
+						return this.riderStats[i].color;
+					}
+				}
+			},
+
+			setFocus: function (focus) {
+				this.focus = focus;
+			},
+
+			setZoom: function (zoom) {
+				this.zoom = zoom;
 			}
 		};
 

@@ -55,17 +55,17 @@ function makeBasicRiders (obj) {
 	obj.climber = climber;
 }
 
-describe("Grand Tour", function () {
-	it("Setup", function (done) {
-		requirejs(["racemanager", "rider", "map", "jquery"], function (RaceManager_class, Rider_class, Map_class) {
-			RaceManager = RaceManager_class;
-			Rider = Rider_class;
-			Map = Map_class;
+before(function (done) {
+	requirejs(["racemanager", "rider", "map", "jquery"], function (RaceManager_class, Rider_class, Map_class) {
+		RaceManager = RaceManager_class;
+		Rider = Rider_class;
+		Map = Map_class;
 
-			done();
-		});
+		done();
 	});
+});
 
+describe("Grand Tour", function () {
 	describe("Lookup tables", function () {
 		before(function () {
 			makeBasicRiders(this);
@@ -74,10 +74,22 @@ describe("Grand Tour", function () {
 		it("Lookup tables are populated and symmetrical", function () {
 			var power = 540;
 			var gradient = 0;
-
 			var distance = this.sprinter.getDistanceFromPower(power, gradient);
-
 			var powerFromLookup = this.sprinter.lookupPowerForDistance(distance, gradient);
+
+			expect(powerFromLookup).to.equal(power);
+
+			power = 370;
+			gradient = .1;
+			distance = this.tt.getDistanceFromPower(power, gradient);
+			powerFromLookup = this.tt.lookupPowerForDistance(distance, gradient);
+
+			expect(powerFromLookup).to.equal(power);
+
+			power = 600;
+			gradient = -.08;
+			distance = this.tt.getDistanceFromPower(power, gradient);
+			powerFromLookup = this.tt.lookupPowerForDistance(distance, gradient);
 
 			expect(powerFromLookup).to.equal(power);
 		});
@@ -85,7 +97,7 @@ describe("Grand Tour", function () {
 		it("Gradients are rounded in the lookup chart", function () {
 			var power1 = this.sprinter.lookupPowerForDistance(.01, 0);
 			var power2 = this.sprinter.lookupPowerForDistance(.01,.08);
-			var power3 = this.sprinter.lookupPowerForDistance(.01,.1);
+			var power3 = this.sprinter.lookupPowerForDistance(.01,.078);
 
 			expect(power1).to.be.below(power2);
 			expect(power2).to.equal(power3);
@@ -311,20 +323,21 @@ describe("Grand Tour", function () {
 		it("Sprinter beats TT in final 400m", function () {
 			this.rm.dropFromGroup(this.sprinter);
 
-			this.tt.setEffort(1);
-			this.sprinter.setEffort(1);
+			// make sure they don't go into the red
+			this.tt.setEffort( { power: 860 } );
+			this.sprinter.setEffort( { power: 900 });
 
 			this.rm.runToFinish();
 
 			this.sprinter.getTimeInSeconds().should.be.below(this.tt.getTimeInSeconds());
 		});
 
-		it("Sprinter beats TT by about 4 seconds in last 400m", function () {
-			(this.tt.getTimeInSeconds() - this.sprinter.getTimeInSeconds()).should.be.within(3, 5);
+		it("Sprinter beats TT by about 1 seconds in last 400m", function () {
+			(this.tt.getTimeInSeconds() - this.sprinter.getTimeInSeconds()).should.be.within(.5, 1.5);
 		});
 	});
 
-	describe.skip("Hill Climb", function () {
+	describe("Hill Climb", function () {
 		before(function () {
 			var rm = new RaceManager();
 			var mtn_rm = new RaceManager();
@@ -382,7 +395,7 @@ describe("Grand Tour", function () {
 		});
 	});
 
-	describe.skip("Climbing Ability", function () {
+	describe("Climbing Ability", function () {
 		before(function () {
 			var rm = new RaceManager();
 
@@ -422,7 +435,7 @@ describe("Grand Tour", function () {
 		});
 	});
 
-	describe.skip("Downhill", function () {
+	describe("Downhill", function () {
 		before(function () {
 			var rm = new RaceManager();
 			var rm2 = new RaceManager();
@@ -476,7 +489,7 @@ describe("Grand Tour", function () {
 		});
 	});
 
-	describe.skip("Rolling Course", function () {
+	describe("Rolling Course", function () {
 		before(function () {
 			var rm = new RaceManager();
 
@@ -530,8 +543,10 @@ describe("Grand Tour", function () {
 		});
 
 		it("Finish order for rolling 8% course @ full effort: TT, Climber, Sprinter", function () {
-			this.tt_steady.getTimeInSeconds().should.be.below(this.climber.getTimeInSeconds());
-			this.climber.getTimeInSeconds().should.be.below(this.sprinter.getTimeInSeconds());
+			var order = this.rm.getStageFinishOrder();
+			order[0].options.name.should.equal("Time-trialer");
+			order[1].options.name.should.equal("Climber");
+			order[2].options.name.should.equal("Sprinter");
 		});
 
 		it("Full effort should not be as effective as pacing effort", function () {
@@ -539,7 +554,7 @@ describe("Grand Tour", function () {
 		});
 	});
 
-	describe.skip("Group Dynamics", function () {
+	describe("Group Dynamics", function () {
 		before(function () {
 			var rm = new RaceManager();
 			var flat_course = new Map({gradients: [[0, 0], [150, 0]]}); // 150 km flat
@@ -628,8 +643,8 @@ describe("Grand Tour", function () {
 		});
 
 		it("Strangely, non-cooperative groups have roughly the same distance and remaining fuel", function () {
-			var d1 = this.group1.getGroupPosition();
-			var d2 = this.group2.getGroupPosition();
+			var d1 = this.group1.getGroupAveragePosition();
+			var d2 = this.group2.getGroupAveragePosition();
 
 			expect(Math.abs(d1 - d2)).to.be.below(1);
 
@@ -644,7 +659,7 @@ describe("Grand Tour", function () {
 		});
 	});
 
-	describe.skip("Group versus Breakaway", function () {
+	describe("Group versus Breakaway", function () {
 		before(function () {
 			var rm = new RaceManager();
 
@@ -771,7 +786,7 @@ describe("Grand Tour", function () {
 		});
 	});
 
-	describe.skip("Refueling and Redzoning", function () {
+	describe("Refueling and Redzoning", function () {
 		var flat_course, tt, sprinter;
 
 		before(function () {

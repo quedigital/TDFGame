@@ -13,6 +13,9 @@ define([], function () {
 			this.currentLeaderIndex = 0;
 			this.timeInFront = 0;
 			this.hasSteppedThisTurn = false;
+			this.counter = 0;
+
+			this.setInitialGroupOrder();
 		},
 
 		hasStepped: function () {
@@ -36,14 +39,16 @@ define([], function () {
 			var distanceToFinish = thisMapDistance - d;
 			var gradient = raceManager.getGradientAtDistance(d);
 
+			var frontPos = this.getGroupMaxPosition() + leader.getDistanceFromPower(this.options.effort.power, gradient);// * 1.3595;
+			leader.extra = Math.round(frontPos * 1000);
+			this.adjustPowerToMaintainPosition(leader, frontPos, gradient);
 			if (this.options.effort) {
 				leader.setEffort(this.options.effort);
 			}
 
 			leader.step(gradient, distanceToFinish);
-			leader.stats.pulls++;
 
-			var pos = this.getGroupPosition();
+			leader.stats.pulls++;
 
 			for (var i = 0; i < this.options.members.length; i++) {
 				var rider = this.options.members[i];
@@ -52,7 +57,10 @@ define([], function () {
 					distanceToFinish = thisMapDistance - d;
 					gradient = raceManager.getGradientAtDistance(d);
 
-					this.adjustPowerToMaintainPosition(rider, pos, gradient);
+					var desiredPos = frontPos - .004 * rider.orderInGroup;
+					rider.extra = Math.round(desiredPos * 1000);
+
+					this.adjustPowerToMaintainPosition(rider, desiredPos, gradient);
 
 					rider.step(gradient, distanceToFinish);
 				}
@@ -60,7 +68,7 @@ define([], function () {
 
 			this.timeInFront++;
 
-			if (this.timeInFront >= 10) {
+			if (this.timeInFront >= 30) {
 				this.switchLeaders();
 				this.timeInFront = 0;
 			}
@@ -76,15 +84,56 @@ define([], function () {
 			return this.options.members[this.currentLeaderIndex];
 		},
 
+		setInitialGroupOrder: function () {
+			var cooperating = 0;
+			for (var i = 0; i < this.options.members.length; i++) {
+				var rider = this.options.members[i];
+				if (rider.isCooperating()) cooperating++;
+			}
+
+			var counter = 0;
+			var noncoop = 0;
+
+			for (var i = 0; i < this.options.members.length; i++) {
+				var rider = this.options.members[i];
+				if (rider.isCooperating()) {
+					rider.orderInGroup = counter++;
+				} else {
+					rider.orderInGroup = cooperating + (++noncoop);
+				}
+			}
+		},
+
 		switchLeaders: function () {
+			this.counter++;
+
+			var cooperating = 0;
+			for (var i = 0; i < this.options.members.length; i++) {
+				var rider = this.options.members[i];
+				if (rider.isCooperating()) cooperating++;
+			}
+
+			var noncoop = 0;
+
+			for (var i = 0; i < this.options.members.length; i++) {
+				var rider = this.options.members[i];
+				if (!rider.isCooperating()) {
+					rider.orderInGroup = cooperating + (++noncoop);
+				}
+			}
+
 			// find next cooperating rider (or stay with this leader if no one is cooperating)
 			for (var i = 1; i < this.options.members.length; i++) {
 				var temp = (this.currentLeaderIndex + i) % this.options.members.length;
 				var rider = this.options.members[temp];
 				if (rider.isCooperating()) {
 					this.currentLeaderIndex = temp;
-					if (rider.options.name.substr(0, 1) == "B") {
-						//console.log("switching to " + temp);
+					rider.orderInGroup = 0;
+					for (var j = 1; j < this.options.members.length; j++) {
+						var rider2 = this.options.members[(temp + j) % this.options.members.length];
+						if (rider2.isCooperating()) {
+							rider2.orderInGroup = j;
+						}
 					}
 					break;
 				}
@@ -126,20 +175,31 @@ define([], function () {
 
 			var diff = distance - d0;
 
+			var power;
+
 			if (diff > 0) {
-				var power = rider.lookupPowerForDistance(diff, gradient);
-				rider.setEffort({ power: power });
+				// speed up
+				power = rider.lookupPowerForDistance(diff, gradient);
 			} else {
-				// slow down?
-				rider.setEffort({ power: 0 });
+				// slow down
+				//var speed_to_maintain = this.getGroupLeader().currentSpeed;
+				var speed_to_maintain = rider.currentSpeed;
+				power = rider.lookupPowerForDistance(speed_to_maintain, gradient);
+				//power = 0;
 			}
+
+			// don't work too hard!
+			if (this.options.effort && this.options.effort.power && power > this.options.effort.power) {
+				power = this.options.effort.power;
+			}
+
+			// drafting reduces actual power requirement [but power is not linear and this made them go slower]
+			//power *= Rider.DRAFT_PERCENT;
+
+			rider.setEffort({ power: power });
 		},
 
-		// this is a tricky function; it determines a lot of the energy expenditure of groups
-		// I'm trying now to define the group's position as the current leader's position
-		// group's position is defined by max position, with a bit of the group's average position factored in too
-		// with a balance between riders expending too much effort to "get to the front"
-		getGroupPosition: function () {
+		getGroupAveragePosition: function () {
 			var total = 0;
 
 			for (var i = 0; i < this.options.members.length; i++) {
@@ -148,18 +208,31 @@ define([], function () {
 
 			var avg = total / this.options.members.length;
 
-			var max = undefined;
+			return avg;
+		},
+
+		getGroupAverageSpeed: function () {
+			var total = 0;
+
 			for (var i = 0; i < this.options.members.length; i++) {
-				var d = this.options.members[i].getDistance();
-				if (d > max || max == undefined) {
-					max = d;
+				total += this.options.members[i].getCurrentSpeed();
+			}
+
+			var avg = total / this.options.members.length;
+
+			return avg;
+		},
+
+		getGroupMaxPosition: function () {
+			var max = undefined;
+
+			for (var i = 0; i < this.options.members.length; i++) {
+				if (this.options.members[i].getDistance() > max || max == undefined) {
+					max = this.options.members[i].getDistance();
 				}
 			}
 
-			//return this.getGroupLeader().getDistance();
-			//return max * .995 + avg * 0.005;
-			//return max * .3 + avg * .7;
-			return avg;
+			return max;
 		},
 
 		// in meters

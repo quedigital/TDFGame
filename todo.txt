@@ -1,5 +1,4 @@
-// TODO: use animation library
-// TODO: how to do time-checks? [time markers?]
+// TODO: group @ 340 watts should go the same speed as solo @ 340 watts [or should it?]
 // TODO: real world: mountain time trial
 // TODO: rethink redzone and fatigue: maybe energy can go negative; it just reduces your power (ie, no "redzone" counter) [based on negative fuel percentage and base power?]
 // TODO: average speed from last time interval for smoothing?
@@ -17,6 +16,7 @@
 // TODO: add a debug rider UI to the test engine
 // TODO: time trials!
 // TODO: helicopter view with current, live standings
+// TODO: cleanup (ie, garbage collect) views and easel.js trappings? (not a priority)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -73,3 +73,12 @@ rolling course
 // NOTE: 15-30% grade in Stage 3 of 2016 Vuelta, 1.8km, 6:30 minutes [test in place]
 // DONE: graph the power curves to make sure they look right
 // DONE: get rid of maxPower [replace with top-end of power curve]
+// DONE: use animation library
+// DONE: put rider's first initial in circle
+// DONE: RaceManager: return finishing order
+// DONE: have an option to not show/update UI every frame (to speed up testing)
+// DONE: get rid of rider.gui
+// DONE: zoom level and centering for top-view [primitive at least]
+// DONE: show fuel % in top-view
+// DONE: something weird is happening at 10km in the "lumpy" stage [speeding up / slowing down between groups on slope; it just looked extreme but wasn't really]
+// DONE: how to do time-checks? [time markers]

@@ -213,6 +213,8 @@ define(["d3"], function (d3) {
 		this.reset();
 	}
 
+	Rider.DRAFT_PERCENT = .61;
+
 	Rider.prototype = {
 		reset: function () {
 			this.distance = 0;
@@ -223,6 +225,9 @@ define(["d3"], function (d3) {
 			this.totalPowerSpent = 0;
 			this.redzone_count = 0;
 			this.cooperating = true;
+			this.orderInGroup = 0;
+
+			this.distanceTrack = [];
 
 			this.setStartingFuelValues();
 
@@ -300,6 +305,13 @@ define(["d3"], function (d3) {
 
 		// step 1 second
 		step: function (gradient, distanceToFinish) {
+			if (this.options.name == "TT Solo") {
+				var a = 5;
+			}
+
+			var lastDistance = this.distance;
+			var lastTime = this.time;
+
 			var desiredPower = this.getMaxPower() * this.effort;
 
 			this.accelerateTo(desiredPower);
@@ -320,12 +332,26 @@ define(["d3"], function (d3) {
 				this.distance += actual_speed;
 
 			this.currentSpeed = actual_speed;
+			this.currentGradient = gradient;
 
 			this.updateFuel();
 
 			this.totalPowerSpent += this.currentPower;
 
 			this.time += timeInterval;
+
+			if (this.options.name == "TT Solo" && (Math.floor(lastTime / 10) != Math.floor(this.time / 10))) {
+				//console.log(this.distance + " -> " + distanceCovered);
+			}
+
+			if (Math.floor(this.distance) > Math.floor(lastDistance)) {
+				var entry = Math.floor(this.distance);
+				this.distanceTrack[entry] = this.time;
+			}
+		},
+
+		getTimeAt: function (distance) {
+			return this.distanceTrack[Math.floor(distance)];
 		},
 
 		accelerateTo: function (desired) {
@@ -345,6 +371,11 @@ define(["d3"], function (d3) {
 		},
 
 		getDistanceFromPower: function (power, gradient) {
+			// drafting uses less power but goes just as far
+			if (this.isInGroup() && !this.isGroupLeader()) {
+				power *= (1 / Rider.DRAFT_PERCENT);
+			}
+
 			// P = Kr M s + Ka A s v^2 d + g i M s
 			// from http://theclimbingcyclist.com/gradients-and-cycling-how-much-harder-are-steeper-climbs/
 
@@ -453,12 +484,12 @@ define(["d3"], function (d3) {
 		updateFuel: function () {
 			var multiplier = this.getMultiplierForPower(this.currentPower);
 
-			var powerScaled = Math.max(0, this.currentPower) * multiplier;
-
-			// drafting! had to tweak this to make drafting more effective
+			var powerWithDraft = this.currentPower;
 			if (this.isInGroup() && !this.isGroupLeader()) {
-				powerScaled *= .70;
+				powerWithDraft *= Rider.DRAFT_PERCENT;
 			}
+
+			var powerScaled = Math.max(0, powerWithDraft) * multiplier;
 
 			this.fueltank -= powerScaled;
 
@@ -511,7 +542,7 @@ define(["d3"], function (d3) {
 
 		setEffort: function (val) {
 			if (val instanceof Object) {
-				if (val.power) {
+				if (val.power != undefined) {
 					this.effort = val.power / this.getMaxPower();
 				}
 			} else {
@@ -533,6 +564,19 @@ define(["d3"], function (d3) {
 
 		getAveragePower: function () {
 			return this.totalPowerSpent / this.time;
+		},
+
+		getAverageSpeedBetween: function (distance1, distance2) {
+			var d1 = Math.floor(distance1);
+			var d2 = Math.floor(distance2);
+
+			var t1 = this.distanceTrack[d1];
+			var t2 = this.distanceTrack[d2];
+
+			var distance = d2 - d1;
+			var time = t2 - t1;
+
+			return distance / time * 3600;
 		},
 
 		setPowerCurve: function () {
@@ -583,7 +627,7 @@ define(["d3"], function (d3) {
 		},
 
 		showStats: function () {
-			var s = this.options.name + ": " + this.getTimeAsString() + " @ " + this.getDistance() + "km " + Math.round(this.getFuelPercent()) + "% (" + Math.round(this.getAverageSpeed()) + "kmh, " + Math.round(this.getAveragePower()) + " watts)";
+			var s = this.options.name + ": " + this.getTimeAsString() + " @ " + Math.round(this.getDistance() * 1000) / 1000 + "km " + Math.round(this.getFuelPercent()) + "% (" + Math.round(this.getAverageSpeed()) + "kmh, " + Math.round(this.getAveragePower()) + " watts)";
 			console.log(s);
 
 			// tracks: pulls at front
@@ -608,21 +652,22 @@ define(["d3"], function (d3) {
 
 		createPowerLookup: function () {
 			// gradient is multiplied by 100 (ie, .12 => 12)
-			for (var gradient = -12; gradient <= 12; gradient += 1) {
+			for (var g = -12; g <= 12; g += 1) {
 				var array = [];
 
-				for (var power = LOOKUP_STARTING_POWER; power < this.getMaxPower(); power += 10) {
-					var distance = this.getDistanceFromPower(power, gradient / 100);
+				for (var power = LOOKUP_STARTING_POWER; power <= this.getMaxPower(); power += 10) {
+					var gradient = g / 100;
+					var distance = this.getDistanceFromPower(power, gradient);
 					array.push(distance);
 				}
 
-				this.powerLookup[gradient] = array;
+				this.powerLookup[g] = array;
 			}
 		},
 
 		lookupPowerForDistance: function (distance, gradient) {
 			// round gradient to nearest tenth
-			var g = Math.round(gradient * 1000 / 100);
+			var g = Math.round(gradient * 100);
 
 			var chart = this.powerLookup[g];
 
@@ -631,16 +676,34 @@ define(["d3"], function (d3) {
 				console.log("No lookup found for gradient " + gradient);
 			}
 
-			for (var i = 0; i < chart.length; i++) {
+			for (var i = 1; i < chart.length; i++) {
 				var d = chart[i];
-				if (d >= distance) {
-					return LOOKUP_STARTING_POWER + (i * 10);
+				if (d > distance) {
+					return LOOKUP_STARTING_POWER + (i - 1 * 10);
+				} else if (d == distance) {
+					return LOOKUP_STARTING_POWER + i * 10;
 				}
 			}
 
 			// off the charts power requirement, give 'em max power
 
 			return this.getMaxPower();
+		},
+
+		lookupDistanceFromPower: function (power, gradient) {
+			// round gradient to nearest tenth
+			var g = Math.round(gradient * 100);
+
+			var chart = this.powerLookup[g];
+
+			if (chart == undefined) {
+				debugger;
+				console.log("No lookup found for gradient " + gradient);
+			}
+
+			var entry = Math.round((power - LOOKUP_STARTING_POWER) / 10);
+
+			return chart[entry];
 		},
 
 		graphPowerCurve: function (dom, options) {

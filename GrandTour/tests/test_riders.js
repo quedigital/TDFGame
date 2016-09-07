@@ -660,11 +660,12 @@ describe("Grand Tour", function () {
 	});
 
 	describe("Group versus Breakaway", function () {
-		before(function () {
-			var rm = new RaceManager();
+		before(function (done) {
+			var rm = new RaceManager( { interval: 10, delay: 20 } );
 
-			var gradient = 0.08;
+			var gradient = .08;//0.08;
 
+			//*
 			var course = new Map({gradients: [
 				[0, 0],
 				[10, 0],
@@ -681,6 +682,15 @@ describe("Grand Tour", function () {
 				[5, -gradient],
 				[20, 0]
 			]});         // 95 km with 3 hills and a finishing straight
+			//*/
+
+			/*
+			 var course = new Map({ gradients: [
+			 [0,gradient],
+			 [50,gradient],
+			 [40,gradient]
+			 ]});
+			 //*/
 
 			rm.setMap(course);
 
@@ -692,19 +702,19 @@ describe("Grand Tour", function () {
 
 			makeBasicRiders(new_riders);
 			this.tt2 = new_riders.tt;
-			this.tt2.options.name = "GTT2";
+			this.tt2.options.name = "2GTT2";
 
 			makeBasicRiders(new_riders);
 			this.tt3 = new_riders.tt;
-			this.tt3.options.name = "GTT3";
+			this.tt3.options.name = "3GTT3";
 
 			makeBasicRiders(new_riders);
 			this.tt4 = new_riders.tt;
-			this.tt4.options.name = "GTT4";
+			this.tt4.options.name = "4GTT4";
 
 			makeBasicRiders(new_riders);
 			this.tt5 = new_riders.tt;
-			this.tt5.options.name = "GTT5";
+			this.tt5.options.name = "5GTT5";
 
 			rm.addRider(this.tt_solo);
 			rm.addRider(this.tt2);
@@ -714,25 +724,21 @@ describe("Grand Tour", function () {
 
 			this.group = rm.makeGroup({ members: [this.tt2, this.tt3, this.tt4, this.tt5], effort: { power: 340 } });
 
-			this.tt_solo.setEffort({ power: 350 });
+			this.tt_solo.setEffort({ power: 340 });
 
 			this.rm = rm;
-		});
 
-		it("Course is (rolling) 95 km", function () {
-			this.rm.getStageDistance().should.be.equal(95);
+			this.rm.runTo( { km: 70, callback: done });
 		});
 
 		it("Group stays together after 80km", function () {
-			this.rm.runTo( { km: 80 });
-
 			expect(this.rm.getDistanceBetween(this.tt2, this.tt3)).to.be.below(.04);
 			expect(this.rm.getDistanceBetween(this.tt2, this.tt4)).to.be.below(.04);
 			expect(this.rm.getDistanceBetween(this.tt2, this.tt5)).to.be.below(.04);
 		});
 
-		it("With 8km to the finish, the group riders should have more energy than the solo rider", function () {
-			this.rm.runTo( { km: -8 });
+		it("With 20km to the finish, the group riders should have more energy than the solo rider", function () {
+			this.rm.runTo( { km: -20 });
 
 			expect(this.tt_solo.getFuelPercent()).to.be.below(this.tt2.getFuelPercent());
 			expect(this.tt_solo.getFuelPercent()).to.be.below(this.tt3.getFuelPercent());
@@ -741,7 +747,6 @@ describe("Grand Tour", function () {
 		});
 
 		it("The gap should be less than 2 minutes between breakaway and peloton", function () {
-
 			var gap = this.rm.getTimeGapBetween(this.tt_solo, this.tt2);
 
 			expect(gap).to.be.within(0, 2.2 * 60);
@@ -756,33 +761,35 @@ describe("Grand Tour", function () {
 
 		it("Group finishes with roughly the same time", function () {
 			// tt ups his tempo (but not so much he bonks)
-			this.tt_solo.setEffort({ power: 358 });
+			this.tt_solo.setEffort({ power: 370 });
 
 			// group speeds up to catch breakaway rider
-			this.group.setOptions({ effort: { power: 620 } });
+			this.group.setOptions({ effort: { power: 512 } });
 
 			this.rm.runToFinish();
-
-			/*
-			this.tt_solo.showStats();
-			this.tt2.showStats();
-			this.tt3.showStats();
-			this.tt4.showStats();
-			this.tt5.showStats();
-			//*/
 
 			expect(this.rm.getTimeGapBetween(this.tt2, this.tt3)).to.be.below(3);
 			expect(this.rm.getTimeGapBetween(this.tt2, this.tt4)).to.be.below(3);
 			expect(this.rm.getTimeGapBetween(this.tt2, this.tt5)).to.be.below(3);
 		});
 
-		it("Breakaway rider gets caught by group by about a minute", function () {
+		it("Group finishes with the last 8km with a faster average speed (around 56km/h)", function () {
+			var group_avg = this.rm.getRiderAverageSpeedBetween(this.tt2, -8, 0);
+
+			var solo_avg = this.rm.getRiderAverageSpeedBetween(this.tt_solo, -8, 0);
+
+			expect(group_avg).to.be.above(solo_avg);
+			expect(group_avg).to.be.within(55, 58);
+			expect(solo_avg).to.be.within(48, 52);
+		});
+
+		it("Breakaway rider gets caught by group by less than 10 seconds", function () {
 			expect(this.tt2.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 			expect(this.tt3.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 			expect(this.tt4.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 			expect(this.tt5.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 
-			expect(this.rm.getTimeGapBetween(this.tt2, this.tt_solo)).to.be.within(.5 * 60, 1.5 * 60);
+			expect(this.rm.getTimeGapBetween(this.tt2, this.tt_solo)).to.be.within(0, 10);
 		});
 	});
 

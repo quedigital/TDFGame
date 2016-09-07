@@ -1,22 +1,23 @@
 // Define the Friend model class. This extends the core Model.
 define(["./view", "easeljs"], function (View) {
 		// I return an initialized object.
-		function TopView (ui) {
+		function TopView (options) {
 			// Call the super constructor.
-			View.call(this, ui);
+			View.call(this, options);
 
-			this.canvas = $("<canvas width=" + ui.width() + " height = " + ui.height() + ">");
-			this.ui.append(this.canvas);
+			this.canvas = $("<canvas width=" + this.container.width() + " height = " + this.container.height() + ">");
+			this.container.append(this.canvas);
 
 			this.stage = new createjs.Stage(this.canvas[0]);
 
-			this.zoom = 10;
-			this.focus = {};
+			this.zoom = options.zoom != undefined ? options.zoom : 10;
+			this.focus = options.focus != undefined ? options.focus : {};
+
+			this.canvas.click($.proxy(this.onClickTopView, this));
 
 			return (this);
 		}
 
-		// The Friend class extends the base Model class.
 		TopView.prototype = Object.create(View.prototype);
 
 		TopView.prototype = {
@@ -24,7 +25,13 @@ define(["./view", "easeljs"], function (View) {
 				return "Top View";
 			},
 
+			onClickTopView: function () {
+				View.prototype.onClickView.call(this);
+			},
+
 			initialize: function (rm) {
+				View.prototype.initialize.call(this, rm);
+
 				var riders = rm.getRiders();
 
 				this.riderStats = [];
@@ -80,26 +87,25 @@ define(["./view", "easeljs"], function (View) {
 
 				var me = this;
 
-				var WIDTH = this.ui.width();
+				var WIDTH = this.container.width();
 				var STAGE_DISTANCE = rm.getStageDistance();
 
 				var center_distance = 0;
 
-				var ratio = WIDTH / STAGE_DISTANCE * this.zoom;
-				var center = WIDTH * .5 / STAGE_DISTANCE / this.zoom * 10;
+				var ratio = (WIDTH / STAGE_DISTANCE) * this.zoom;
 
 				if (this.focus) {
 					if (this.focus.group) {
-						center_distance = this.focus.group.getGroupAveragePosition() - center;//.45
+						center_distance = this.focus.group.getGroupAveragePosition();
 					} else if (this.focus.rider) {
-						center_distance = this.focus.rider.getDistance() - center;
+						center_distance = this.focus.rider.getDistance();
 					}
 				}
 
 				_.each(riders, function (rider, index) {
 					var riderGraphic = me.riderStats[index].graphic;
 					//var x = (rider.getDistance() - center_distance) / STAGE_DISTANCE * WIDTH * me.zoom;
-					var x = (rider.getDistance() - center_distance) * ratio;
+					var x = (rider.getDistance() - center_distance) * ratio + (WIDTH * .5);
 
 					riderGraphic.x = x;
 					riderGraphic.y = 100 + index * 55;
@@ -108,14 +114,15 @@ define(["./view", "easeljs"], function (View) {
 					me.riderStats[index].label.text = rider.isGroupLeader() ? nick + "*" : nick;
 					//me.riderStats[index].fuelText.text = Math.round(rider.getFuelPercent()) + "%";
 					//me.riderStats[index].fuelText.text = Math.round(rider.getDistance() * 100) / 100;
-					//me.riderStats[index].fuelText.text = Math.round(rider.getCurrentSpeedInKMH());
-					me.riderStats[index].fuelText.text = rider.extra;
+					//me.riderStats[index].powerText.text = Math.round(rider.getCurrentSpeedInKMH()) + "km/h";
+					me.riderStats[index].fuelText.text = "desired: " + rider.extra;
 					//me.riderStats[index].powerText.text = Math.round(rider.getCurrentPower()) + "W";
 					//me.riderStats[index].powerText.text = rider.orderInGroup + " @ " + Math.round(rider.getCurrentPower()) + "W";;
 					//me.riderStats[index].powerText.text = rider.currentGradient;
-					me.riderStats[index].powerText.text = Math.round(rider.getDistance() * 1000);
+					me.riderStats[index].powerText.text = "actual: " + Math.round(rider.getDistance() * 1000);
 
 					me.riderStats[index].line4.text = rider.orderInGroup + " @ " + Math.round(rider.getCurrentPower()) + "W";
+					//me.riderStats[index].line4.text = Math.round(rider.getCurrentPower()) + "W";
 				});
 
 				this.stage.update();

@@ -16,9 +16,11 @@ define(["underscore", "group"], function (_, Group) {
 
 		this.views = [];
 
-		this.frameInterval = 10;
+		this.frameInterval = (!options || options.interval == undefined) ? 10 : options.interval;
 		this.currentFrameInterval = 0;
-		this.frameDelay = 0;
+		this.frameDelay = (!options || options.delay == undefined) ? 0 : options.delay;
+
+		this.paused = false;
 	}
 
 	RaceManager.prototype = {
@@ -43,7 +45,9 @@ define(["underscore", "group"], function (_, Group) {
 			this.map = map;
 		},
 
+		// TODO: I don't think this function is used anymore
 		go: function (callback) {
+			debugger;
 			if (!this.running) {
 				this.options.stepCallback = callback;
 
@@ -67,6 +71,8 @@ define(["underscore", "group"], function (_, Group) {
 		},
 
 		doStep: function (options) {
+			if (this.paused) return;
+
 			if (!this.started) {
 				this.initializeViews();
 
@@ -109,7 +115,9 @@ define(["underscore", "group"], function (_, Group) {
 				group.endStep();
 			}
 
-			this.updateViews();
+			if (this.hasActiveViews()) {
+				this.updateViews();
+			}
 
 			if (allFinished) {
 				this.stop();
@@ -247,7 +255,7 @@ define(["underscore", "group"], function (_, Group) {
 					this.currentFrameInterval = 0;
 				}
 
-				if (this.target.callback && doTimeout) {
+				if (this.target.callback && doTimeout && this.hasActiveViews()) {
 					// async
 					setTimeout($.proxy(this.runToTarget, this), this.frameDelay);
 				} else {
@@ -344,28 +352,6 @@ define(["underscore", "group"], function (_, Group) {
 			return rider.getAverageSpeedBetween(d1, d2);
 		},
 
-		// returns estimated time between (if still riding) or difference between finishing times
-		getTimeGapBetween_old: function (rider1, rider2) {
-			var gap;
-
-			// TODO: is there a more sophisticated way of doing this?
-			if (!rider1.isFinished() && !rider2.isFinished()) {
-				var d1 = rider1.getDistance();
-				var d2 = rider2.getDistance();
-				var d = d1 - d2;
-				if (d > 0) {
-					var sp = rider2.getCurrentSpeed();
-					gap = d / rider2.getCurrentSpeed();
-				} else {
-					gap = -d / rider1.getCurrentSpeed();
-				}
-			} else {
-				gap = Math.abs(rider1.getTimeInSeconds() - rider2.getTimeInSeconds());
-			}
-
-			return gap;
-		},
-
 		getDistanceBetween: function (rider1, rider2) {
 			return Math.abs(rider1.getDistance() - rider2.getDistance());
 		},
@@ -390,6 +376,14 @@ define(["underscore", "group"], function (_, Group) {
 			});
 		},
 
+		hasActiveViews: function () {
+			var active = $.map(this.views, function (view, index) {
+				if (view.disabled != true) return view;
+			});
+
+			return active.length > 0;
+		},
+
 		getLeaderColor: function () {
 			var v = this.views[0];
 			if (v) {
@@ -403,6 +397,10 @@ define(["underscore", "group"], function (_, Group) {
 		getStageFinishOrder: function () {
 			var riders = this.riders.slice();
 			return riders.sort(sortByTime);
+		},
+
+		togglePause: function () {
+			this.paused = !this.paused;
 		}
 	};
 

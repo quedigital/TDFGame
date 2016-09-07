@@ -1,8 +1,9 @@
 define(function () {
-		function View (ui) {
-			this.ui = ui;
+		function View (options) {
+			this.container = options.container;
+			this.disabled = options.disabled;
 
-			this.ui.empty();
+			this.container.empty();
 
 			return (this);
 		}
@@ -13,15 +14,18 @@ define(function () {
 			},
 
 			initialize: function (rm) {
-
+				this.rm = rm;
 			},
 
 			step: function (rm) {
 				console.log("tick");
+			},
+
+			onClickView: function (event) {
+				this.rm.togglePause();
 			}
 		};
 
-		// Return the base Model constructor.
 		return (View);
 	}
 );

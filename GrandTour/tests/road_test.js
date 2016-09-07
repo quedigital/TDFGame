@@ -101,9 +101,8 @@ describe("Road Test", function () {
 	});
 
 	describe.only("Group versus Breakaway", function () {
-//		before(function (done) {
-		before(function () {
-			var rm = new RaceManager();
+		before(function (done) {
+			var rm = new RaceManager( { interval: 50, delay: 0 } );
 
 			var gradient = .08;//0.08;
 
@@ -164,26 +163,22 @@ describe("Road Test", function () {
 			rm.addRider(this.tt4);
 			rm.addRider(this.tt5);
 
-			this.group = rm.makeGroup({ members: [this.tt2, this.tt3, this.tt4, this.tt5], effort: { power: 340 } });
+			this.group = rm.makeGroup({ members: [this.tt2, this.tt3, this.tt4, this.tt5], effort: { power: 320 } });
 
 			this.tt_solo.setEffort({ power: 340 });
 
 			this.rm = rm;
 
-			/*
-			var tv = new TopView($("#race-view"));
-			tv.setFocus({ group: this.group });
-			//tv.setFocus({ rider: this.tt_solo });
-			tv.setZoom(1000);
+			var tv = new TopView({
+				container: $("#race-view"),
+				focus: { group: this. group },//{ rider: this.tt_solo }
+				zoom: 1000,
+				disabled: false
+			});
 
 			this.rm.addView(tv);
-			//*/
 
-			this.rm.frameInterval = 1;
-			this.rm.frameDelay = 20;
-
-//			this.rm.runTo( { km: 80, callback: done });
-			this.rm.runTo( { km: 70 } );
+			this.rm.runTo( { km: 70, callback: done });
 		});
 
 		it("Group stays together after 80km", function () {
@@ -226,7 +221,7 @@ describe("Road Test", function () {
 			this.tt_solo.setEffort({ power: 370 });
 
 			// group speeds up to catch breakaway rider
-			this.group.setOptions({ effort: { power: 512 } });
+			this.group.setOptions({ effort: { power: 455 } });
 
 			this.rm.runToFinish();
 
@@ -243,7 +238,7 @@ describe("Road Test", function () {
 			console.log("tt_solo finishing average speed = " + avg);
 		});
 
-		it("Breakaway rider gets caught by group by less than 10 seconds", function () {
+		it("Breakaway rider gets caught by group by about 30 seconds", function () {
 			console.log("****");
 
 			this.tt_solo.showStats();
@@ -257,7 +252,7 @@ describe("Road Test", function () {
 			expect(this.tt4.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 			expect(this.tt5.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 
-			expect(this.rm.getTimeGapBetween(this.tt2, this.tt_solo)).to.be.within(0, 10);
+			expect(this.rm.getTimeGapBetween(this.tt2, this.tt_solo)).to.be.within(25, 35);
 		});
 	});
 
@@ -308,7 +303,7 @@ describe("Road Test", function () {
 
 	describe("Sprinting Flat Stage", function () {
 		before(function (done) {
-			var rm = new RaceManager();
+			var rm = new RaceManager({ interval: 1, delay: 10 });
 			var flat_course = new Map({gradients: [[0, 0], [15, 0]]}); // 15 km flat
 
 			rm.setMap(flat_course);
@@ -322,11 +317,14 @@ describe("Road Test", function () {
 
 			this.rm = rm;
 
-			var tv = new TopView($("#race-view"));
+			var tv = new TopView({
+				container: $("#race-view"),
+				focus: { rider: this.tt },
+				zoom: 200,
+				disabled: false
+			});
 
 			this.rm.addView(tv);
-
-			this.rm.frameInterval = 10;
 
 			this.rm.runTo({meters: -400, callback: done});
 		});
@@ -347,7 +345,7 @@ describe("Road Test", function () {
 			this.rm.dropFromGroup(this.sprinter);
 
 			this.tt.setEffort( { power: 860 } );
-			this.sprinter.setEffort( { power: 900 });
+			this.sprinter.setEffort( { power: 990 });
 
 			this.rm.runToFinish();
 
@@ -357,8 +355,8 @@ describe("Road Test", function () {
 			this.sprinter.getTimeInSeconds().should.be.below(this.tt.getTimeInSeconds());
 		});
 
-		it("Sprinter beats TT by about 4 seconds in last 400m", function () {
-			(this.tt.getTimeInSeconds() - this.sprinter.getTimeInSeconds()).should.be.within(3, 5);
+		it("Sprinter beats TT by about 1 second in last 400m", function () {
+			(this.tt.getTimeInSeconds() - this.sprinter.getTimeInSeconds()).should.be.within(.5, 1.5);
 		});
 	});
 });

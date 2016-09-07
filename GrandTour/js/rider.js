@@ -1,5 +1,5 @@
 define(["d3"], function (d3) {
-	var LOOKUP_STARTING_POWER = 200;
+	var LOOKUP_STARTING_POWER = 100;
 
 	// from https://mycurvefit.com/
 	// for max power output (fits Andrei Greipel's numbers from the Tour of Flanders)
@@ -213,7 +213,7 @@ define(["d3"], function (d3) {
 		this.reset();
 	}
 
-	Rider.DRAFT_PERCENT = .61;
+	Rider.DRAFT_PERCENT = .8;
 
 	Rider.prototype = {
 		reset: function () {
@@ -373,7 +373,7 @@ define(["d3"], function (d3) {
 		getDistanceFromPower: function (power, gradient) {
 			// drafting uses less power but goes just as far
 			if (this.isInGroup() && !this.isGroupLeader()) {
-				power *= (1 / Rider.DRAFT_PERCENT);
+				power *= 1 + (1 - Rider.DRAFT_PERCENT);
 			}
 
 			// P = Kr M s + Ka A s v^2 d + g i M s
@@ -412,7 +412,8 @@ define(["d3"], function (d3) {
 				flat = dist * (.5 + .5 * this.options.flatAbility);
 			}
 
-			return flat + climb + descend;
+			var total = flat + climb + descend;
+			return total;
 		},
 
 		setStartingFuelValues: function () {
@@ -679,7 +680,7 @@ define(["d3"], function (d3) {
 			for (var i = 1; i < chart.length; i++) {
 				var d = chart[i];
 				if (d > distance) {
-					return LOOKUP_STARTING_POWER + (i - 1 * 10);
+					return LOOKUP_STARTING_POWER + ((i - 1) * 10);
 				} else if (d == distance) {
 					return LOOKUP_STARTING_POWER + i * 10;
 				}
@@ -697,8 +698,9 @@ define(["d3"], function (d3) {
 			var chart = this.powerLookup[g];
 
 			if (chart == undefined) {
-				debugger;
-				console.log("No lookup found for gradient " + gradient);
+				//debugger;
+				//console.log("No lookup found for gradient " + gradient);
+				return undefined;
 			}
 
 			var entry = Math.round((power - LOOKUP_STARTING_POWER) / 10);

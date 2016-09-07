@@ -1,4 +1,10 @@
-// TODO: group @ 340 watts should go the same speed as solo @ 340 watts [or should it?]
+// TODO: come up with more energy-efficient paceline logic [while still maintaining test results]
+// TODO: cycling shouldn't send leader to the back right away (wastes too much energy getting into position again)
+// TODO: UI elements for: leading group distance to finish, gaps to other groups
+// TODO: way to show gradient in top view (shaded roads?)
+// TODO: top view option: show entire race
+// TODO: top view: curved path for course (showing whole bounds?)
+// TODO: groups with a dedicated leader pulling (ie, non-switching)
 // TODO: real world: mountain time trial
 // TODO: rethink redzone and fatigue: maybe energy can go negative; it just reduces your power (ie, no "redzone" counter) [based on negative fuel percentage and base power?]
 // TODO: average speed from last time interval for smoothing?
@@ -82,3 +88,10 @@ rolling course
 // DONE: show fuel % in top-view
 // DONE: something weird is happening at 10km in the "lumpy" stage [speeding up / slowing down between groups on slope; it just looked extreme but wasn't really]
 // DONE: how to do time-checks? [time markers]
+// DONE: view options as objects, not separate functions
+// DONE: try to make tests use visuals or not with a simple flag
+// DONE: group @ 340 watts should go the same speed as solo @ 340 watts [or should it? I don't think so: dropping back eases the speed; otherwise it would be > 340 to lead so it's one or the other]
+// DONE: click to toggle pause
+// DONE: centering topview isn't quite right
+// DONE: sprinter/tt group dynamics not working to keep one in front of the other [minimum wattage was too high; and math mistake in power lookup]
+// DONE: group doesn't stay together when going even slightly uphill

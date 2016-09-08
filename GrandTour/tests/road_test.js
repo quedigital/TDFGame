@@ -102,7 +102,7 @@ describe("Road Test", function () {
 
 	describe.only("Group versus Breakaway", function () {
 		before(function (done) {
-			var rm = new RaceManager( { interval: 50, delay: 0 } );
+			var rm = new RaceManager( { interval: 1, delay: 100 } );
 
 			var gradient = .08;//0.08;
 
@@ -163,7 +163,7 @@ describe("Road Test", function () {
 			rm.addRider(this.tt4);
 			rm.addRider(this.tt5);
 
-			this.group = rm.makeGroup({ members: [this.tt2, this.tt3, this.tt4, this.tt5], effort: { power: 320 } });
+			this.group = rm.makeGroup({ members: [this.tt2, this.tt3, this.tt4, this.tt5], effort: { power: 355 }, timeInFront: 15 });
 
 			this.tt_solo.setEffort({ power: 340 });
 
@@ -173,7 +173,7 @@ describe("Road Test", function () {
 				container: $("#race-view"),
 				focus: { group: this. group },//{ rider: this.tt_solo }
 				zoom: 1000,
-				disabled: false
+				disabled: true
 			});
 
 			this.rm.addView(tv);
@@ -196,7 +196,7 @@ describe("Road Test", function () {
 			expect(this.tt_solo.getFuelPercent()).to.be.below(this.tt5.getFuelPercent());
 		});
 
-		it("The gap should be less than 2 minutes between breakaway and peloton", function () {
+		it("The gap should be about 2 minutes between breakaway and peloton", function () {
 			this.tt_solo.showStats();
 			this.tt2.showStats();
 			this.tt3.showStats();
@@ -206,7 +206,7 @@ describe("Road Test", function () {
 			var gap = this.rm.getTimeGapBetween(this.tt_solo, this.tt2);
 			console.log("gap = " + gap);
 
-			expect(gap).to.be.within(0, 2.2 * 60);
+			expect(gap).to.be.within(1.5 * 60, 2.2 * 60);
 		});
 
 		it("Group riders haven't used up as much energy as the solo rider", function () {
@@ -221,7 +221,7 @@ describe("Road Test", function () {
 			this.tt_solo.setEffort({ power: 370 });
 
 			// group speeds up to catch breakaway rider
-			this.group.setOptions({ effort: { power: 455 } });
+			this.group.setOptions({ effort: { power: 470 } });
 
 			this.rm.runToFinish();
 
@@ -238,8 +238,11 @@ describe("Road Test", function () {
 			console.log("tt_solo finishing average speed = " + avg);
 		});
 
-		it("Breakaway rider gets caught by group by about 30 seconds", function () {
+		it("Breakaway rider gets caught by group by about 10 seconds", function () {
 			console.log("****");
+
+			console.log(this.tt2.error);
+			console.log(this.tt3.error);
 
 			this.tt_solo.showStats();
 			this.tt2.showStats();
@@ -252,7 +255,7 @@ describe("Road Test", function () {
 			expect(this.tt4.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 			expect(this.tt5.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 
-			expect(this.rm.getTimeGapBetween(this.tt2, this.tt_solo)).to.be.within(25, 35);
+			expect(this.rm.getTimeGapBetween(this.tt2, this.tt_solo)).to.be.within(5, 20);
 		});
 	});
 

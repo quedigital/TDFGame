@@ -1,16 +1,21 @@
 define([], function () {
 	function Group (options) {
+		if (options === undefined) options = {};
+
 		this.options = options;
 
 		if (this.options && this.options.members)
 			this.options.members = this.options.members.slice();
+
+		if (this.options.timeInFront === undefined)
+			this.options.timeInFront = 10;
 
 		this.reset();
 	}
 
 	Group.prototype = {
 		reset: function () {
-			this.currentLeaderIndex = 0;
+			//this.currentLeaderIndex = 0;
 			this.timeInFront = 0;
 			this.hasSteppedThisTurn = false;
 			this.counter = 0;
@@ -39,39 +44,47 @@ define([], function () {
 			var distanceToFinish = thisMapDistance - d;
 			var gradient = raceManager.getGradientAtDistance(d);
 
-			var frontPos = this.getGroupAveragePosition() + leader.getDistanceFromPower(this.options.effort.power, gradient);
-			//var frontPos = this.getGroupMaxPosition();
-			//leader.extra = Math.round(frontPos * 1000);
-			//this.adjustPowerToMaintainPosition(leader, frontPos, gradient);
-			/*
-			if (this.options.effort) {
-				leader.setEffort(this.options.effort);
-			}
-			*/
+			var frontPos = this.getGroupMaxPosition() + leader.getDistanceFromPower(this.options.effort.power, gradient);
 
-			//leader.step(gradient, distanceToFinish);
-
-			//leader.stats.pulls++;
+			leader.stats.pulls++;
 
 			for (var i = 0; i < this.options.members.length; i++) {
 				var rider = this.options.members[i];
-				//if (rider != leader) {
-					d = rider.getDistance();
-					distanceToFinish = thisMapDistance - d;
-					gradient = raceManager.getGradientAtDistance(d);
+				d = rider.getDistance();
+				distanceToFinish = thisMapDistance - d;
+				gradient = raceManager.getGradientAtDistance(d);
 
-					var desiredPos = frontPos;// - (.005 * Math.abs(rider.orderInGroup));
-					rider.extra = Math.round(desiredPos * 1000);
+				var desiredPos = frontPos;
+				if (rider != leader) {
+					//var percent = this.timeInFront / 10.0;
+					desiredPos = frontPos - (.003 * Math.abs(rider.orderInGroup));
+//					desiredPos = (desiredPos *1 + rider.distance *0);
+//					desiredPos = (desiredPos *.9 + rider.distance *.1);
+					//desiredPos = rider.distance + (desiredPos - rider.distance) * percent;
+				}
+				rider.extra = Math.round(desiredPos * 1000);
 
-					this.adjustPowerToMaintainPosition(rider, desiredPos, gradient);
+				this.adjustPowerToReachPosition(rider, desiredPos, gradient);
 
-					rider.step(gradient, distanceToFinish);
-				//}
+				var lastDistance = rider.distance;
+
+				rider.step(gradient, distanceToFinish);
+
+				// hack to ignore power-rounding issues; jump straight to the desired position [this was necessary to conserve energy; not sure it's the best solution]
+				// try setting the desired position in 10 frames?
+				var error = rider.distance - desiredPos;
+				if (Math.abs(error) > .001) {
+					//debugger;
+					//rider.distance = lastDistance;
+					//this.adjustPowerToReachPosition(rider, desiredPos, gradient);
+				}
+				//rider.overrideDistance(desiredPos);
+				rider.error += Math.abs(rider.distance - desiredPos);
 			}
 
 			this.timeInFront++;
 
-			if (this.timeInFront >= 10) {
+			if (this.timeInFront >= this.options.timeInFront) {
 				this.switchLeaders();
 				this.timeInFront = 0;
 			}
@@ -79,7 +92,7 @@ define([], function () {
 			this.markStepped();
 		},
 
-		adjustPowerToMaintainPosition: function (rider, distance, gradient) {
+		adjustPowerToReachPosition: function (rider, distance, gradient) {
 			// TODO: smooth these out using better logic, easing, etc.
 			var d0 = rider.getDistance();
 
@@ -99,13 +112,15 @@ define([], function () {
 				//power = 100;
 			}
 
+			if (rider != this.getGroupLeader()) {
+				// drafting reduces actual power requirement [but power is not linear and this made them go slower]
+				power *= Rider.DRAFT_PERCENT;
+			}
+
 			// don't work too hard!
 			if (this.options.effort && this.options.effort.power && power > this.options.effort.power) {
 				power = this.options.effort.power;
 			}
-
-			// drafting reduces actual power requirement [but power is not linear and this made them go slower]
-			//power *= Rider.DRAFT_PERCENT;
 
 			rider.setEffort({ power: power });
 		},
@@ -115,7 +130,14 @@ define([], function () {
 		},
 
 		getGroupLeader: function () {
-			return this.options.members[this.currentLeaderIndex];
+			for (var i = 0; i < this.options.members.length; i++) {
+				var rider = this.options.members[i];
+				if (rider.orderInGroup == 0) return rider;
+			}
+
+			// shouldn't get here
+			return this.options.members[0];
+			//return this.options.members[this.currentLeaderIndex];
 		},
 
 		setInitialGroupOrder: function () {
@@ -128,12 +150,13 @@ define([], function () {
 			var noncoop = 0;
 			var half = Math.floor(cooperating * .5);
 			var counter = half;
+			var isEven = cooperating / 2 == Math.floor(cooperating / 2);
 
 			for (var i = 0; i < this.options.members.length; i++) {
 				var rider = this.options.members[i];
 				if (rider.isCooperating()) {
 					var index = counter--;
-					if (index < -half) {
+					if (index < -half + (isEven ? 1 : 0)) {
 						index = half;
 					}
 					rider.orderInGroup = index;
@@ -154,6 +177,7 @@ define([], function () {
 			}
 
 			var noncoop = 0;
+			var isEven = cooperating / 2 == Math.floor(cooperating / 2);
 
 			// non-cooperative members go to the back
 			for (var i = 0; i < this.options.members.length; i++) {
@@ -169,10 +193,13 @@ define([], function () {
 				var rider = this.options.members[i];
 				var index = rider.orderInGroup;
 				index -= 1;
-				if (index < -half) index = half;
+				if (index < -half + (isEven ? 1 : 0)) {
+					index = half;
+				}
 				rider.orderInGroup = index;
 			}
 
+			/*
 			// find next cooperating rider (or stay with this leader if no one is cooperating)
 			for (var i = 1; i < this.options.members.length; i++) {
 				var temp = (this.currentLeaderIndex + i) % this.options.members.length;
@@ -182,6 +209,7 @@ define([], function () {
 					break;
 				}
 			}
+			*/
 
 			/*
 			// find next cooperating rider (or stay with this leader if no one is cooperating)

@@ -1,5 +1,5 @@
 define(["d3"], function (d3) {
-	var LOOKUP_STARTING_POWER = 100;
+	var LOOKUP_STARTING_POWER = 10;
 
 	// from https://mycurvefit.com/
 	// for max power output (fits Andrei Greipel's numbers from the Tour of Flanders)
@@ -242,6 +242,8 @@ define(["d3"], function (d3) {
 			this.powerLookup = {};
 
 			this.createPowerLookup();
+
+			this.error = 0;
 		},
 
 		setupPowerFactors: function () {
@@ -340,12 +342,20 @@ define(["d3"], function (d3) {
 
 			this.time += timeInterval;
 
-			if (this.options.name == "TT Solo" && (Math.floor(lastTime / 10) != Math.floor(this.time / 10))) {
-				//console.log(this.distance + " -> " + distanceCovered);
+			this.overrideDistance(this.distance);
+		},
+
+		overrideDistance: function (distance) {
+			var error = Math.abs(this.distance - distance);
+			if (error > .001) {
+				//debugger;
+				var d = this.lookupDistanceFromPower(this.currentPower, 0);
 			}
 
-			if (Math.floor(this.distance) > Math.floor(lastDistance)) {
-				var entry = Math.floor(this.distance);
+			this.distance = distance;
+
+			var entry = Math.floor(this.distance);
+			if (this.distanceTrack[entry] == undefined) {
 				this.distanceTrack[entry] = this.time;
 			}
 		},
@@ -357,6 +367,8 @@ define(["d3"], function (d3) {
 		accelerateTo: function (desired) {
 			if (this.currentPower <= desired) {
 				var attemptedPower = Math.min(this.currentPower + this.options.acceleration, desired);
+				// turn off acceleration for testing
+				//attemptedPower = desired;
 
 				if (this.fueltank > 0) {
 					this.currentPower = Math.min(this.fueltank, attemptedPower);
@@ -371,9 +383,9 @@ define(["d3"], function (d3) {
 		},
 
 		getDistanceFromPower: function (power, gradient) {
-			// drafting uses less power but goes just as far
+			// drafting uses less power but goes just as far (ie, use non-reduced power levels for distance calculations)
 			if (this.isInGroup() && !this.isGroupLeader()) {
-				power *= 1 + (1 - Rider.DRAFT_PERCENT);
+				power *= (1.0 / Rider.DRAFT_PERCENT);
 			}
 
 			// P = Kr M s + Ka A s v^2 d + g i M s
@@ -438,34 +450,6 @@ define(["d3"], function (d3) {
 			//console.log(power + " => " + duration);
 
 			return duration;
-		},
-
-		old_getDurationForPower: function (power) {
-			if (power > this.options.powerCurve[0]) {
-				return 1;
-			} else if (power < this.options.powerCurve[this.options.powerCurve.length - 1]) {
-				return POWER_INTERVALS[POWER_INTERVALS.length - 1];
-			}
-
-			for (var i = 0; i < this.options.powerCurve.length; i++) {
-				var p1 = this.options.powerCurve[i];
-
-				if (power >= p1) {
-					// interpolate here
-					if (i > 0) {
-						var p0 = this.options.powerCurve[i - 1];
-						var t = (power - p0) / (p1 - p0);
-						var d0 = POWER_INTERVALS[i - 1];
-						var d1 = POWER_INTERVALS[i];
-						//var duration = d0 + d3.easeSinInOut(t) * (d1 - d0);
-						var duration = d0 + d3.easeLinear(t) * (d1 - d0);
-						return duration;
-					}
-				}
-			}
-
-			// above the highest rate
-			return 1;
 		},
 
 		getMultiplierForPower: function (power) {
@@ -679,8 +663,16 @@ define(["d3"], function (d3) {
 
 			for (var i = 1; i < chart.length; i++) {
 				var d = chart[i];
+				// TODO: find the closest power
 				if (d > distance) {
-					return LOOKUP_STARTING_POWER + ((i - 1) * 10);
+					var d0 = chart[i - 1];
+					var diff_high = d - distance;
+					var diff_low = distance - chart[i - 1];
+					if (diff_high > diff_low) {
+						return LOOKUP_STARTING_POWER + ((i - 1) * 10);
+					} else {
+						return LOOKUP_STARTING_POWER + (i * 10);
+					}
 				} else if (d == distance) {
 					return LOOKUP_STARTING_POWER + i * 10;
 				}

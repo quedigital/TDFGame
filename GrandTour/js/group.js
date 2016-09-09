@@ -243,6 +243,18 @@ define([], function () {
 			}
 		},
 
+		getAverageFinishTime: function () {
+			var total = 0;
+
+			for (var i = 0; i < this.options.members.length; i++) {
+				total += this.options.members[i].getTime();
+			}
+
+			var avg = total / this.options.members.length;
+
+			return avg;
+		},
+
 		getGroupAveragePosition: function () {
 			var total = 0;
 
@@ -353,7 +365,7 @@ define([], function () {
 				rider.showStats();
 			});
 
-			var s = "Avg Speed: " + (Math.round(this.getGroupAverageSpeed() * 10) / 10) + "kmh  Fuel: " + Math.round(this.getRemainingFuel()) + "%";
+			var s = (this.options.name == undefined ? "  Group: " : "  " + this.options.name + " Group: ") + "Avg Speed: " + (Math.round(this.getGroupAverageSpeed() * 10) / 10) + "kmh  Fuel: " + Math.round(this.getRemainingFuel()) + "%";
 
 			console.log(s);
 		}

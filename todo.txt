@@ -1,6 +1,4 @@
-// TODO: tests for groups of other sizes
 // TODO: getGroupLeader formula might not be right for groups of other sizes
-// TODO: groups with a dedicated leader pulling (ie, non-switching) [sort of works right now]
 // TODO: in-game breakaway calculator
 // TODO: power is reduced, via easing function, when energy is below 20% (and player avatar starts sweating)
 // TODO: UI elements for: leading group distance to finish, gaps to other groups
@@ -103,3 +101,5 @@ rolling course
 // DONE: groups with non-cooperative riders [go in back]
 // DONE: groups with riders pulling for longer turns? [rider.options.timeInFrontPercent = 200, etc.]
 // DONE: tests for coop/non-coop groups
+// DONE: groups with a dedicated leader pulling (ie, non-switching) [sort of works right now]
+// DONE: tests for groups of other sizes

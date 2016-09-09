@@ -100,7 +100,7 @@ describe("Road Test", function () {
 		});
 	});
 
-	describe.only("4-Person Group Collaborating versus Non-collaborating", function () {
+	describe("4-Person Collaborating Group versus Non-collaborating", function () {
 		before(function (done) {
 			var rm = new RaceManager( { interval: 1, delay: 100 } );
 
@@ -171,8 +171,8 @@ describe("Road Test", function () {
 			rm.addRider(this.tt23);
 			rm.addRider(this.tt24);
 
-			this.group1 = rm.makeGroup({ members: [this.tt11, this.tt12, this.tt13, this.tt14], effort: { power: 345 }, timeInFront: 10 });
-			this.group2 = rm.makeGroup({ members: [this.tt21, this.tt22, this.tt23, this.tt24], effort: { power: 345 }, timeInFront: 10 });
+			this.group1 = rm.makeGroup({ members: [this.tt11, this.tt12, this.tt13, this.tt14], effort: { power: 375 }, timeInFront: 10 });
+			this.group2 = rm.makeGroup({ members: [this.tt21, this.tt22, this.tt23, this.tt24], effort: { power: 375 }, timeInFront: 10 });
 
 			this.rm = rm;
 
@@ -185,14 +185,215 @@ describe("Road Test", function () {
 
 			this.rm.addView(tv);
 
-			this.rm.runTo( { km: 70, callback: done });
+			this.rm.runToFinish({ callback: done });
 		});
 
-		it("Collaborating group goes farther and faster than non-collaborating group", function () {
+		it("Non-collaborating group runs out of gas and finishes after Collaborating group", function () {
 			this.group1.showStats();
 			this.group2.showStats();
-			expect(this.group1.getGroupAveragePosition()).to.be.above(this.group2.getGroupAveragePosition());
 			expect(this.group1.getGroupAverageSpeed()).to.be.above(this.group2.getGroupAverageSpeed());
+			expect(this.group1.getAverageFinishTime()).to.be.below(this.group2.getAverageFinishTime());
+		});
+	});
+
+	describe.only("Pull Duration", function () {
+		before(function (done) {
+			var rm = new RaceManager( { interval: 1, delay: 100 } );
+
+			var gradient = .08;
+
+			var course = new Map({gradients: [
+				[0, 0],
+				[10, 0],
+				[5, gradient],
+				[5,0],
+				[5, -gradient],
+				[10, 0],
+				[5, gradient],
+				[5,0],
+				[5, -gradient],
+				[10, 0],
+				[5, gradient],
+				[5,0],
+				[5, -gradient],
+				[20, 0]
+			]});         // 95 km with 3 hills and a finishing straight
+
+			rm.setMap(course);
+
+			var new_riders = {};
+
+			makeBasicRiders(new_riders);
+			this.tt11 = new_riders.tt;
+			this.tt11.options.name = "1G1R1";
+
+			makeBasicRiders(new_riders);
+			this.tt12 = new_riders.tt;
+			this.tt12.options.name = "2G1R2";
+
+			makeBasicRiders(new_riders);
+			this.tt13 = new_riders.tt;
+			this.tt13.options.name = "3G1R3";
+
+			makeBasicRiders(new_riders);
+			this.tt14 = new_riders.tt;
+			this.tt14.options.name = "4G1R4";
+
+			makeBasicRiders(new_riders);
+			this.tt21 = new_riders.tt;
+			this.tt21.options.name = "1G2R1";
+			this.tt21.options.timeInFrontPercent = 200;
+
+			makeBasicRiders(new_riders);
+			this.tt22 = new_riders.tt;
+			this.tt22.options.name = "2G2R2";
+			this.tt22.options.timeInFrontPercent = 300;
+
+			makeBasicRiders(new_riders);
+			this.tt23 = new_riders.tt;
+			this.tt23.options.name = "3G2R3";
+			this.tt23.options.timeInFrontPercent = 200;
+
+			makeBasicRiders(new_riders);
+			this.tt24 = new_riders.tt;
+			this.tt24.options.name = "4G2R4";
+			this.tt24.options.timeInFrontPercent = 200;
+
+			rm.addRider(this.tt11);
+			rm.addRider(this.tt12);
+			rm.addRider(this.tt13);
+			rm.addRider(this.tt14);
+
+			rm.addRider(this.tt21);
+			rm.addRider(this.tt22);
+			rm.addRider(this.tt23);
+			rm.addRider(this.tt24);
+
+			this.group1 = rm.makeGroup({ members: [this.tt11, this.tt12, this.tt13, this.tt14], effort: { power: 375 }, timeInFront: 10, name: "Short Turn" });
+			this.group2 = rm.makeGroup({ members: [this.tt21, this.tt22, this.tt23, this.tt24], effort: { power: 375 }, timeInFront: 10, name: "Long Turn" });
+
+			this.rm = rm;
+
+			var tv = new TopView({
+				container: $("#race-view"),
+				focus: { group: this.group2 },
+				zoom: 1000,
+				disabled: true
+			});
+
+			this.rm.addView(tv);
+
+			this.rm.runToFinish({ callback: done });
+		});
+
+		it("Groups with longers turns at the front finish faster with more fuel [though I'm not sure this is realistic]", function () {
+			//this.group1.showStats();
+			//this.group2.showStats();
+			expect(this.group2.getGroupAverageSpeed()).to.be.above(this.group1.getGroupAverageSpeed());
+			expect(this.group2.getAverageFinishTime()).to.be.below(this.group1.getAverageFinishTime());
+			expect(this.group2.getRemainingFuel()).to.be.above(this.group1.getRemainingFuel());
+		});
+	});
+
+	describe("Groups of Different Sizes", function () {
+		before(function (done) {
+			var rm = new RaceManager( { interval: 1, delay: 100 } );
+
+			var gradient = .08;
+
+			var course = new Map({gradients: [
+				[0, 0],
+				[10, 0],
+				[5, gradient],
+				[5,0],
+				[5, -gradient],
+				[10, 0],
+				[5, gradient],
+				[5,0],
+				[5, -gradient],
+				[10, 0],
+				[5, gradient],
+				[5,0],
+				[5, -gradient],
+				[20, 0]
+			]});         // 95 km with 3 hills and a finishing straight
+
+			rm.setMap(course);
+
+			var new_riders = {};
+
+			makeBasicRiders(new_riders);
+			this.tt11 = new_riders.tt;
+			this.tt11.options.name = "1G1R1";
+
+			makeBasicRiders(new_riders);
+			this.tt12 = new_riders.tt;
+			this.tt12.options.name = "2G1R2";
+
+			makeBasicRiders(new_riders);
+			this.tt13 = new_riders.tt;
+			this.tt13.options.name = "3G1R3";
+
+			makeBasicRiders(new_riders);
+			this.tt14 = new_riders.tt;
+			this.tt14.options.name = "4G1R4";
+
+			makeBasicRiders(new_riders);
+			this.tt21 = new_riders.tt;
+			this.tt21.options.name = "1G2R1";
+
+			makeBasicRiders(new_riders);
+			this.tt22 = new_riders.tt;
+			this.tt22.options.name = "2G2R2";
+
+			makeBasicRiders(new_riders);
+			this.tt23 = new_riders.tt;
+			this.tt23.options.name = "3G2R3";
+
+			makeBasicRiders(new_riders);
+			this.tt24 = new_riders.tt;
+			this.tt24.options.name = "4G2R4";
+
+			makeBasicRiders(new_riders);
+			this.tt25 = new_riders.tt;
+			this.tt25.options.name = "5G2R5";
+
+			makeBasicRiders(new_riders);
+			this.tt26 = new_riders.tt;
+			this.tt26.options.name = "6G2R6";
+
+			rm.addRider(this.tt11);
+			rm.addRider(this.tt12);
+			rm.addRider(this.tt13);
+			rm.addRider(this.tt14);
+
+			rm.addRider(this.tt21);
+			rm.addRider(this.tt22);
+			rm.addRider(this.tt23);
+			rm.addRider(this.tt24);
+			rm.addRider(this.tt25);
+			rm.addRider(this.tt26);
+
+			this.group1 = rm.makeGroup({ members: [this.tt11, this.tt12, this.tt13, this.tt14], effort: { power: 395 }, timeInFront: 10 });
+			this.group2 = rm.makeGroup({ members: [this.tt21, this.tt22, this.tt23, this.tt24, this.tt25, this.tt26], effort: { power: 408 }, timeInFront: 10 });
+
+			this.rm = rm;
+
+			var tv = new TopView({
+				container: $("#race-view"),
+				focus: { group: this.group2 },
+				zoom: 1000,
+				disabled: true
+			});
+
+			this.rm.addView(tv);
+
+			this.rm.runToFinish({ callback: done });
+		});
+
+		it("Larger groups are able to finish faster", function () {
+			expect(this.group2.getGroupAverageSpeed()).to.be.above(this.group1.getGroupAverageSpeed());
+			expect(this.group2.getAverageFinishTime()).to.be.below(this.group1.getAverageFinishTime());
 		});
 	});
 

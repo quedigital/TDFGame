@@ -100,7 +100,103 @@ describe("Road Test", function () {
 		});
 	});
 
-	describe.only("Group versus Breakaway", function () {
+	describe.only("4-Person Group Collaborating versus Non-collaborating", function () {
+		before(function (done) {
+			var rm = new RaceManager( { interval: 1, delay: 100 } );
+
+			var gradient = .08;
+
+			var course = new Map({gradients: [
+				[0, 0],
+				[10, 0],
+				[5, gradient],
+				[5,0],
+				[5, -gradient],
+				[10, 0],
+				[5, gradient],
+				[5,0],
+				[5, -gradient],
+				[10, 0],
+				[5, gradient],
+				[5,0],
+				[5, -gradient],
+				[20, 0]
+			]});         // 95 km with 3 hills and a finishing straight
+
+			rm.setMap(course);
+
+			var new_riders = {};
+
+			makeBasicRiders(new_riders);
+			this.tt11 = new_riders.tt;
+			this.tt11.options.name = "1G1R1";
+
+			makeBasicRiders(new_riders);
+			this.tt12 = new_riders.tt;
+			this.tt12.options.name = "2G1R2";
+
+			makeBasicRiders(new_riders);
+			this.tt13 = new_riders.tt;
+			this.tt13.options.name = "3G1R3";
+
+			makeBasicRiders(new_riders);
+			this.tt14 = new_riders.tt;
+			this.tt14.options.name = "4G1R4";
+
+			makeBasicRiders(new_riders);
+			this.tt21 = new_riders.tt;
+			this.tt21.options.name = "1G2R1";
+
+			makeBasicRiders(new_riders);
+			this.tt22 = new_riders.tt;
+			this.tt22.options.name = "2G2R2";
+			this.tt22.setCooperating(false);
+
+			makeBasicRiders(new_riders);
+			this.tt23 = new_riders.tt;
+			this.tt23.options.name = "3G2R3";
+			this.tt23.setCooperating(false);
+
+			makeBasicRiders(new_riders);
+			this.tt24 = new_riders.tt;
+			this.tt24.options.name = "4G2R4";
+			this.tt24.setCooperating(false);
+
+			rm.addRider(this.tt11);
+			rm.addRider(this.tt12);
+			rm.addRider(this.tt13);
+			rm.addRider(this.tt14);
+			rm.addRider(this.tt21);
+			rm.addRider(this.tt22);
+			rm.addRider(this.tt23);
+			rm.addRider(this.tt24);
+
+			this.group1 = rm.makeGroup({ members: [this.tt11, this.tt12, this.tt13, this.tt14], effort: { power: 345 }, timeInFront: 10 });
+			this.group2 = rm.makeGroup({ members: [this.tt21, this.tt22, this.tt23, this.tt24], effort: { power: 345 }, timeInFront: 10 });
+
+			this.rm = rm;
+
+			var tv = new TopView({
+				container: $("#race-view"),
+				focus: { group: this.group2 },
+				zoom: 1000,
+				disabled: true
+			});
+
+			this.rm.addView(tv);
+
+			this.rm.runTo( { km: 70, callback: done });
+		});
+
+		it("Collaborating group goes farther and faster than non-collaborating group", function () {
+			this.group1.showStats();
+			this.group2.showStats();
+			expect(this.group1.getGroupAveragePosition()).to.be.above(this.group2.getGroupAveragePosition());
+			expect(this.group1.getGroupAverageSpeed()).to.be.above(this.group2.getGroupAverageSpeed());
+		});
+	});
+
+	describe("Group versus Breakaway", function () {
 		before(function (done) {
 			var rm = new RaceManager( { interval: 1, delay: 100 } );
 
@@ -152,18 +248,27 @@ describe("Road Test", function () {
 			makeBasicRiders(new_riders);
 			this.tt4 = new_riders.tt;
 			this.tt4.options.name = "4GTT4";
+			//this.tt4.setCooperating(false);
 
 			makeBasicRiders(new_riders);
 			this.tt5 = new_riders.tt;
 			this.tt5.options.name = "5GTT5";
+			//this.tt5.setCooperating(false);
+
+			makeBasicRiders(new_riders);
+			this.tt6 = new_riders.tt;
+			this.tt6.options.name = "6GTT6";
+			//this.tt6.setCooperating(false);
+			//this.tt6.options.timeInFrontPercent = 100;
 
 			rm.addRider(this.tt_solo);
 			rm.addRider(this.tt2);
 			rm.addRider(this.tt3);
 			rm.addRider(this.tt4);
 			rm.addRider(this.tt5);
+			rm.addRider(this.tt6);
 
-			this.group = rm.makeGroup({ members: [this.tt2, this.tt3, this.tt4, this.tt5], effort: { power: 355 }, timeInFront: 15 });
+			this.group = rm.makeGroup({ members: [this.tt2, this.tt3, this.tt4, this.tt5, this.tt6], effort: { power: 345 }, timeInFront: 10 });
 
 			this.tt_solo.setEffort({ power: 340 });
 
@@ -171,7 +276,7 @@ describe("Road Test", function () {
 
 			var tv = new TopView({
 				container: $("#race-view"),
-				focus: { group: this. group },//{ rider: this.tt_solo }
+				focus: { group: this.group },//{ rider: this.tt_solo }
 				zoom: 1000,
 				disabled: true
 			});
@@ -196,7 +301,7 @@ describe("Road Test", function () {
 			expect(this.tt_solo.getFuelPercent()).to.be.below(this.tt5.getFuelPercent());
 		});
 
-		it("The gap should be about 2 minutes between breakaway and peloton", function () {
+		it("The gap should be about 1 minute between breakaway and peloton", function () {
 			this.tt_solo.showStats();
 			this.tt2.showStats();
 			this.tt3.showStats();
@@ -206,7 +311,7 @@ describe("Road Test", function () {
 			var gap = this.rm.getTimeGapBetween(this.tt_solo, this.tt2);
 			console.log("gap = " + gap);
 
-			expect(gap).to.be.within(1.5 * 60, 2.2 * 60);
+			expect(gap).to.be.within(.5 * 60, 1.5 * 60);
 		});
 
 		it("Group riders haven't used up as much energy as the solo rider", function () {
@@ -221,7 +326,7 @@ describe("Road Test", function () {
 			this.tt_solo.setEffort({ power: 370 });
 
 			// group speeds up to catch breakaway rider
-			this.group.setOptions({ effort: { power: 470 } });
+			this.group.setOptions({ effort: { power: 475 } });
 
 			this.rm.runToFinish();
 
@@ -238,24 +343,22 @@ describe("Road Test", function () {
 			console.log("tt_solo finishing average speed = " + avg);
 		});
 
-		it("Breakaway rider gets caught by group by about 10 seconds", function () {
+		it("Breakaway rider gets caught by group by about 25-50 seconds", function () {
 			console.log("****");
-
-			console.log(this.tt2.error);
-			console.log(this.tt3.error);
 
 			this.tt_solo.showStats();
 			this.tt2.showStats();
 			this.tt3.showStats();
 			this.tt4.showStats();
 			this.tt5.showStats();
+			this.tt6.showStats();
 
 			expect(this.tt2.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 			expect(this.tt3.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 			expect(this.tt4.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 			expect(this.tt5.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 
-			expect(this.rm.getTimeGapBetween(this.tt2, this.tt_solo)).to.be.within(5, 20);
+			expect(this.rm.getTimeGapBetween(this.tt2, this.tt_solo)).to.be.within(25, 50);
 		});
 	});
 

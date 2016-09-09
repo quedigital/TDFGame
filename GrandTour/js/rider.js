@@ -236,14 +236,15 @@ define(["d3"], function (d3) {
 			this.options.recovery = this.options.powerCurve[this.options.powerCurve.length - 1];
 
 			this.group = undefined;
+			this.timeInFrontCount = 0;
+			this.timeInFrontExtra = 0;
+			this.timeInFrontPassed = false;
 
 			this.stats = { pulls: 0 };
 
 			this.powerLookup = {};
 
 			this.createPowerLookup();
-
-			this.error = 0;
 		},
 
 		setupPowerFactors: function () {
@@ -346,12 +347,6 @@ define(["d3"], function (d3) {
 		},
 
 		overrideDistance: function (distance) {
-			var error = Math.abs(this.distance - distance);
-			if (error > .001) {
-				//debugger;
-				var d = this.lookupDistanceFromPower(this.currentPower, 0);
-			}
-
 			this.distance = distance;
 
 			var entry = Math.floor(this.distance);

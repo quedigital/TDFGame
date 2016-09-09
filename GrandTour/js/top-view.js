@@ -108,7 +108,7 @@ define(["./view", "easeljs"], function (View) {
 					var x = (rider.getDistance() - center_distance) * ratio + (WIDTH * .5);
 
 					riderGraphic.x = x;
-					riderGraphic.y = 100 + index * 55;
+					riderGraphic.y = rider.y ? 250 + rider.y : 100 + index * 55;
 
 					var nick = rider.options.name.substr(0, 1).toUpperCase();
 					me.riderStats[index].label.text = rider.isGroupLeader() ? nick + "*" : nick;

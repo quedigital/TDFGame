@@ -1,22 +1,18 @@
+// TODO: tests for groups of other sizes
+// TODO: getGroupLeader formula might not be right for groups of other sizes
+// TODO: groups with a dedicated leader pulling (ie, non-switching) [sort of works right now]
 // TODO: in-game breakaway calculator
-// TODO: slow acceleration is the main cause of distance errors in pacelines; maybe trying not to move too quickly will help?
-// TODO: also, increasing the "timeInFront" helps the group become more efficient
-// TODO: also, limiting the riders to the group's max power causes position errors; but not limiting it uses too much energy (and causes bouncing)
 // TODO: power is reduced, via easing function, when energy is below 20% (and player avatar starts sweating)
-// TODO: come up with more energy-efficient paceline logic [while still maintaining test results]
-// TODO: cycling shouldn't send leader to the back right away (wastes too much energy getting into position again)
 // TODO: UI elements for: leading group distance to finish, gaps to other groups
 // TODO: way to show gradient in top view (shaded roads?)
 // TODO: top view option: show entire race
 // TODO: top view: curved path for course (showing whole bounds?)
-// TODO: groups with a dedicated leader pulling (ie, non-switching)
 // TODO: real world: mountain time trial
 // TODO: rethink redzone and fatigue: maybe energy can go negative; it just reduces your power (ie, no "redzone" counter) [based on negative fuel percentage and base power?]
 // TODO: average speed from last time interval for smoothing?
 // TODO: check flat stage time trial (from last year's TdF) for Sprinter and Climber times (to check power curves)
 // TODO: drafting only works above a specific speed?
-// TODO: numbers in breakaway increase advantage?
-// TODO: animating the group dynamics might help problem solving
+// TODO: numbers in breakaway increase advantage? [this seems to happen naturally; double-check!]
 // TODO: sprinter may use too much energy at 1600 watts
 // TODO: burst energy vs. overall energy? [like the Cycling game]
 // TODO: crashing on curves
@@ -99,3 +95,11 @@ rolling course
 // DONE: sprinter/tt group dynamics not working to keep one in front of the other [minimum wattage was too high; and math mistake in power lookup]
 // DONE: group doesn't stay together when going even slightly uphill
 // DONE: change power curve to more straightforward duration interpolation at intervals (2s, 5s, 60s, 5m, 20m, 45m, 6hrs)
+// DONE: slow acceleration is the main cause of distance errors in pacelines; maybe trying not to move too quickly will help? [using a circular rotation pattern helped immensely]
+// NOTE: increasing the "timeInFront" helps the group become more efficient
+// DONE: come up with more energy-efficient paceline logic [while still maintaining test results] [circular pattern did the trick]
+// DONE: cycling shouldn't send leader to the back right away (wastes too much energy getting into position again) [again, circular!]
+// DONE: animating the group dynamics might help problem solving
+// DONE: groups with non-cooperative riders [go in back]
+// DONE: groups with riders pulling for longer turns? [rider.options.timeInFrontPercent = 200, etc.]
+// DONE: tests for coop/non-coop groups

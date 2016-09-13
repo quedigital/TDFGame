@@ -1,11 +1,17 @@
 define([], function () {
+	var CHANGE_DURATION = 10;
+
 	function Group (options) {
 		if (options === undefined) options = {};
 
 		this.options = options;
 
-		if (this.options && this.options.members)
-			this.options.members = this.options.members.slice();
+		if (this.options && this.options.members) {
+			for (var i = 0; i < this.options.members; i++) {
+				this.addRider(this.options.members[i]);
+			}
+		} else
+			this.options.members = [];
 
 		if (this.options.timeInFront === undefined)
 			this.options.timeInFront = 10;
@@ -15,11 +21,16 @@ define([], function () {
 
 	Group.prototype = {
 		reset: function () {
-			//this.currentLeaderIndex = 0;
+			this.currentLeaderIndex = 0;
 			this.timeInFront = 0;
 			this.hasSteppedThisTurn = false;
-			this.counter = 0;
-			this.lastLeader = undefined;
+
+			this.setInitialGroupOrder();
+		},
+
+		addRider: function (rider) {
+			this.options.members.push(rider);
+			rider.setGroup(this);
 
 			this.setInitialGroupOrder();
 		},
@@ -36,30 +47,39 @@ define([], function () {
 			this.hasSteppedThisTurn = true;
 		},
 
+		convertToLeaderTime: function (leader, tick) {
+			var holdTime = leader.options.timeInFrontPercent == undefined ? 0 : ((leader.options.timeInFrontPercent - 100) / 100) * this.options.timeInFront;
+			if (holdTime == 0) return tick;
+
+			var half = Math.floor(this.options.timeInFront * .5);
+			if (tick < half) return tick;
+			else if (tick < half + holdTime) return half;
+			else return tick - holdTime;
+		},
+
+		prestep: function (raceManager) {
+			// check for dropped riders here?
+		},
+
 		step: function (raceManager) {
-			// THEORY: leader steps and followers try to keep up
+			this.prestep();
+
 			var leader = this.getGroupLeader();
-
-			if (leader != this.lastLeader) {
-				leader.timeInFrontCount = 0;
-				leader.timeInFrontExtra = 0;
-				leader.timeInFrontPassed = false;
-				this.lastLeader = leader;
-			}
-
-			var d = leader.getDistance();
 			var thisMapDistance = raceManager.getStageDistance();
+			var d = leader.getDistance();
 			var gradient = raceManager.getGradientAtDistance(d);
 
-//			var frontPos = this.getGroupAveragePosition() + leader.getDistanceFromPower(this.options.effort.power, gradient);
+			var cooperating = this.getNumCooperating();
+
+			var leaderAngle = -180 + leader.orderInGroup * (360 / cooperating);
+			var tf = this.convertToLeaderTime(leader, this.timeInFront);
+			leaderAngle += (360 / cooperating / this.options.timeInFront) * tf;
+
 			var frontPos = this.getCooperatingAveragePosition() + leader.getDistanceFromPower(this.options.effort.power, gradient);
 
 			leader.stats.pulls++;
 
-			var cooperating = this.getNumCooperating();
 			var noncoop = 0;
-
-			var incrementTimer = true;
 
 			for (var i = 0; i < this.options.members.length; i++) {
 				var rider = this.options.members[i];
@@ -69,11 +89,8 @@ define([], function () {
 						distanceToFinish = thisMapDistance - d;
 						gradient = raceManager.getGradientAtDistance(d);
 
-						var degreesPerTick = 360 / (cooperating * this.options.timeInFront);
-						var riderAngle = 360 / cooperating;
-						var degrees = (rider.orderInGroup * riderAngle) - (this.timeInFront * degreesPerTick);
+						var degrees = rider.orderInGroup * (360 / cooperating) - leaderAngle;
 						var radius = .003 * cooperating * .5;
-
 						var desiredPos = frontPos + Math.sin(degrees / 180 * Math.PI) * radius;
 						rider.y = Math.cos(degrees / 180 * Math.PI) * 40;
 
@@ -82,48 +99,30 @@ define([], function () {
 						this.adjustPowerToReachPosition(rider, desiredPos, gradient);
 
 						rider.step(gradient, distanceToFinish);
-
-						//rider.overrideDistance(desiredPos);
-
-						if (rider == leader) {
-							// riders can take longer turns at the front [but not shorter]
-							var percent = rider.options.timeInFrontPercent === undefined ? 1.0 : (rider.options.timeInFrontPercent / 100.0);
-							if (percent > 1) {
-								var totalTickCount = percent * this.options.timeInFront;
-								var half = Math.floor(this.options.timeInFront * .5);
-								if (rider.timeInFrontCount == half && !rider.timeInFrontPassed) {
-									incrementTimer = false;
-									rider.timeInFrontExtra++;
-									if (rider.timeInFrontCount * 2 + rider.timeInFrontExtra >= totalTickCount) {
-										rider.timeInFrontPassed = true;
-										incrementTimer = true;
-									}
-								}
-								if (incrementTimer)
-									rider.timeInFrontCount++;
-							}
-						}
 					}
 				} else {
-					var desiredPos = frontPos - ((cooperating + noncoop) * .003);
-					noncoop++;
+					if (!rider.isFinished()) {
+						var desiredPos = frontPos - ((cooperating + noncoop) * .003);
+						noncoop++;
 
-					rider.y = -25;
+						rider.y = -25;
 
-					rider.extra = Math.round(desiredPos * 1000);
+						rider.extra = Math.round(desiredPos * 1000);
 
-					d = rider.getDistance();
-					distanceToFinish = thisMapDistance - d;
-					gradient = raceManager.getGradientAtDistance(d);
+						d = rider.getDistance();
+						distanceToFinish = thisMapDistance - d;
+						gradient = raceManager.getGradientAtDistance(d);
 
-					this.adjustPowerToReachPosition(rider, desiredPos, gradient);
+						this.adjustPowerToReachPosition(rider, desiredPos, gradient);
 
-					rider.step(gradient, distanceToFinish);
+						rider.step(gradient, distanceToFinish);
+					}
 				}
 			}
 
-			if (incrementTimer)
-				this.timeInFront++;
+			this.timeInFront++;
+
+			this.updateGroupLeader();
 
 			this.markStepped();
 		},
@@ -140,7 +139,7 @@ define([], function () {
 				power = rider.lookupPowerForDistance(diff, gradient);
 			} else {
 				// slow down
-				var speed_to_maintain = this.getGroupMinSpeed();
+				var speed_to_maintain = this.getGroupMinCurrentSpeed();
 				power = rider.lookupPowerForDistance(speed_to_maintain, gradient);
 			}
 
@@ -161,33 +160,27 @@ define([], function () {
 			this.clearStepped();
 		},
 
+		updateGroupLeader: function () {
+			var leader = this.getGroupLeader();
+			var leaderTime = leader.options.timeInFrontPercent == undefined ? this.options.timeInFront : this.options.timeInFront * Math.floor(leader.options.timeInFrontPercent / 100.0);
+			if (this.timeInFront >= leaderTime) {
+				var coop = this.getNumCooperating();
+				this.currentLeaderIndex = (this.currentLeaderIndex + 1) % coop;
+				this.timeInFront = 0;
+			}
+		},
+
 		getGroupLeader: function () {
-			var coop = this.getNumCooperating();
-
-			// return the rider mathematically-in-the-front by timing
-			// 2 riders = offset 0
-			// 3 riders = offset 3
-			// 4 riders = offset 5
-			// 5 riders = offset 7? 8?
-
-			var offset = 7;// + ((coop - 1) / coop);
-			var rider = Math.floor((this.timeInFront + this.options.timeInFront + offset) / this.options.timeInFront) % coop;
-			return this.options.members[rider];
-
-			/* I tried using front-rider but the results came back skewed for some reason
-			var max = undefined;
-			var leader = undefined;
-
+			var counter = 0;
 			for (var i = 0; i < this.options.members.length; i++) {
 				var rider = this.options.members[i];
-				if (max == undefined || rider.distance > max) {
-					max = rider.distance;
-					leader = i;
-				}
+				if (rider.isCooperating() && counter == this.currentLeaderIndex)
+					return rider;
+				else
+					counter++;
 			}
 
-			return this.options.members[leader];
-			*/
+			return undefined;
 		},
 
 		setInitialGroupOrder: function () {
@@ -348,6 +341,10 @@ define([], function () {
 
 		getPowerSetting: function () {
 			return this.options.effort.power;
+		},
+
+		setEffort: function (options) {
+			this.options.effort = options;
 		},
 
 		getRemainingFuel: function () {

@@ -75,6 +75,58 @@ before(function (done) {
 describe("Road Test", function () {
 	this.timeout(60000);
 
+	describe.only("Peloton", function () {
+		before(function (done) {
+			var rm = new RaceManager({ interval: 1, delay: 10 });
+			var flat_course = new Map({gradients: [[0, 0], [15, 0]]}); // 15 km flat
+
+			rm.setMap(flat_course);
+
+			makeBasicRiders(this);
+
+			rm.addRider(this.tt);
+			rm.addRider(this.sprinter);
+
+			//rm.makeGroup({ members: [this.tt, this.sprinter], effort: { power: 320 } });
+
+			this.rm = rm;
+
+			var tv = new TopView({
+				container: $("#race-view"),
+				focus: { rider: this.tt },
+				zoom: 200,
+				disabled: true
+			});
+
+			this.tv = tv;
+
+			this.rm.addView(tv);
+
+			this.rm.runTo({km: 8, callback: done});
+		});
+
+		it("Peloton is together after 8km with Time-trialer leading", function (done) {
+			this.sprinter.showStats();
+			this.tt.showStats();
+			expect(this.rm.getPelotonRange()).to.be.below(4);
+			expect(this.tt.getDistance()).to.be.above(this.sprinter.getDistance());
+
+			this.rm.setPelotonEffort( { power: 500 } );
+
+			//this.tv.setDisabled(false);
+
+			this.rm.runToFinish({ callback: done });
+		});
+
+		it("Time-trialer speeds up and drops Sprinter", function () {
+			this.sprinter.showStats();
+			this.tt.showStats();
+
+			expect(this.rm.getTimeGapBetween(this.tt, this.sprinter)).to.be.above(15);
+			expect(this.rm.getPelotonSize()).to.be(1);
+		});
+	});
+
 	describe("Top view: flat course", function () {
 		before(function (done) {
 			this.rm = new RaceManager();
@@ -88,7 +140,7 @@ describe("Road Test", function () {
 			this.rm.addRider(this.sprinter);
 			this.rm.addRider(this.climber);
 
-			var tv = new TopView($("#race-view"));
+			var tv = new TopView( { container: $("#race-view") } );
 
 			this.rm.addView(tv);
 
@@ -171,7 +223,8 @@ describe("Road Test", function () {
 			rm.addRider(this.tt23);
 			rm.addRider(this.tt24);
 
-			this.group1 = rm.makeGroup({ members: [this.tt11, this.tt12, this.tt13, this.tt14], effort: { power: 375 }, timeInFront: 10 });
+//			this.group1 = rm.makeGroup({ members: [this.tt11, this.tt12, this.tt13, this.tt14], effort: { power: 375 }, timeInFront: 10 });
+			this.group1 = rm.makeGroup({ members: [this.tt11, this.tt12], effort: { power: 375 }, timeInFront: 10 });
 			this.group2 = rm.makeGroup({ members: [this.tt21, this.tt22, this.tt23, this.tt24], effort: { power: 375 }, timeInFront: 10 });
 
 			this.rm = rm;
@@ -180,7 +233,7 @@ describe("Road Test", function () {
 				container: $("#race-view"),
 				focus: { group: this.group2 },
 				zoom: 1000,
-				disabled: true
+				disabled: false
 			});
 
 			this.rm.addView(tv);
@@ -196,7 +249,7 @@ describe("Road Test", function () {
 		});
 	});
 
-	describe.only("Pull Duration", function () {
+	describe("Pull Duration", function () {
 		before(function (done) {
 			var rm = new RaceManager( { interval: 1, delay: 100 } );
 
@@ -286,9 +339,9 @@ describe("Road Test", function () {
 			this.rm.runToFinish({ callback: done });
 		});
 
-		it("Groups with longers turns at the front finish faster with more fuel [though I'm not sure this is realistic]", function () {
-			//this.group1.showStats();
-			//this.group2.showStats();
+		it("Groups with some riders taking longer turns at the front finish faster with more fuel", function () {
+			this.group1.showStats();
+			this.group2.showStats();
 			expect(this.group2.getGroupAverageSpeed()).to.be.above(this.group1.getGroupAverageSpeed());
 			expect(this.group2.getAverageFinishTime()).to.be.below(this.group1.getAverageFinishTime());
 			expect(this.group2.getRemainingFuel()).to.be.above(this.group1.getRemainingFuel());
@@ -593,7 +646,7 @@ describe("Road Test", function () {
 			this.rm.addRider(this.sprinter);
 			this.rm.addRider(this.climber);
 
-			var tv = new TopView($("#race-view"));
+			var tv = new TopView( { container: $("#race-view") } );
 
 			this.rm.addView(tv);
 
@@ -662,8 +715,8 @@ describe("Road Test", function () {
 			this.sprinter.getTimeInSeconds().should.be.below(this.tt.getTimeInSeconds());
 		});
 
-		it("Sprinter beats TT by about 1 second in last 400m", function () {
-			(this.tt.getTimeInSeconds() - this.sprinter.getTimeInSeconds()).should.be.within(.5, 1.5);
+		it("Sprinter beats TT by about 2 second in last 400m", function () {
+			(this.tt.getTimeInSeconds() - this.sprinter.getTimeInSeconds()).should.be.within(1, 3);
 		});
 	});
 });

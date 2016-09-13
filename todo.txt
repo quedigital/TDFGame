@@ -1,6 +1,11 @@
-// TODO: getGroupLeader formula might not be right for groups of other sizes
+// TODO: Peloton = special form of group (with no pace line cycling) with most riders at the front [how to determine] setting the speed
+// TODO: test to see what happens when riders can't get onto the paceline
+// TODO: riders getting dropped from groups
+// TODO: use physics to determine rider side-to-side positioning
+// TODO: Group leader-of-the-moment can set the group's tempo
 // TODO: in-game breakaway calculator
 // TODO: power is reduced, via easing function, when energy is below 20% (and player avatar starts sweating)
+// TODO: UI for "attack", "join group", "protect rider", "sprint", "sprint joystick", "[fun] power setting"
 // TODO: UI elements for: leading group distance to finish, gaps to other groups
 // TODO: way to show gradient in top view (shaded roads?)
 // TODO: top view option: show entire race
@@ -103,3 +108,4 @@ rolling course
 // DONE: tests for coop/non-coop groups
 // DONE: groups with a dedicated leader pulling (ie, non-switching) [sort of works right now]
 // DONE: tests for groups of other sizes
+// DONE: getGroupLeader formula might not be right for groups of other sizes

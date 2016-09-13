@@ -3,9 +3,8 @@ define(function () {
 			this.container = options.container;
 			this.disabled = options.disabled;
 
-			this.container.empty();
-
-			return (this);
+			if (this.container)
+				this.container.empty();
 		}
 
 		View.prototype = {
@@ -23,6 +22,10 @@ define(function () {
 
 			onClickView: function (event) {
 				this.rm.togglePause();
+			},
+
+			setDisabled: function (disabled) {
+				this.disabled = disabled;
 			}
 		};
 

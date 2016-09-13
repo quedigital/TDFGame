@@ -236,9 +236,6 @@ define(["d3"], function (d3) {
 			this.options.recovery = this.options.powerCurve[this.options.powerCurve.length - 1];
 
 			this.group = undefined;
-			this.timeInFrontCount = 0;
-			this.timeInFrontExtra = 0;
-			this.timeInFrontPassed = false;
 
 			this.stats = { pulls: 0 };
 

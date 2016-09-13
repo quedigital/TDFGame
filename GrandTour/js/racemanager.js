@@ -1,4 +1,4 @@
-define(["underscore", "group"], function (_, Group) {
+define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 	function sortByTime (a, b) {
 		return a.time > b.time;
 	}
@@ -12,7 +12,9 @@ define(["underscore", "group"], function (_, Group) {
 		this.riders = [];
 		this.time = 0;
 
-		this.groups = [];
+		this.peloton = new Peloton();
+
+		this.groups = [this.peloton];
 
 		this.views = [];
 
@@ -26,6 +28,8 @@ define(["underscore", "group"], function (_, Group) {
 	RaceManager.prototype = {
 		addRider: function (rider) {
 			this.riders.push(rider);
+
+			this.peloton.addRider(rider);
 		},
 
 		removeRider: function (rider) {
@@ -401,6 +405,18 @@ define(["underscore", "group"], function (_, Group) {
 
 		togglePause: function () {
 			this.paused = !this.paused;
+		},
+
+		getPelotonRange: function () {
+			return this.peloton.getDistanceBetween();
+		},
+
+		setPelotonEffort: function (options) {
+			this.peloton.setEffort(options);
+		},
+
+		getPelotonSize: function () {
+			return this.peloton.getSize();
 		}
 	};
 

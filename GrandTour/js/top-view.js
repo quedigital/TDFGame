@@ -1,5 +1,5 @@
 // Define the Friend model class. This extends the core Model.
-define(["./view", "easeljs"], function (View) {
+define(["./view", "easeljs", "jquery"], function (View) {
 		// I return an initialized object.
 		function TopView (options) {
 			// Call the super constructor.
@@ -14,13 +14,11 @@ define(["./view", "easeljs"], function (View) {
 			this.focus = options.focus != undefined ? options.focus : {};
 
 			this.canvas.click($.proxy(this.onClickTopView, this));
-
-			return (this);
 		}
 
 		TopView.prototype = Object.create(View.prototype);
 
-		TopView.prototype = {
+		$.extend(TopView.prototype, {
 			getName: function () {
 				return "Top View";
 			},
@@ -143,7 +141,7 @@ define(["./view", "easeljs"], function (View) {
 			setZoom: function (zoom) {
 				this.zoom = zoom;
 			}
-		};
+		});
 
 		// Return the base Friend constructor.
 		return (TopView);

@@ -75,7 +75,7 @@ before(function (done) {
 describe("Road Test", function () {
 	this.timeout(60000);
 
-	describe.only("Peloton", function () {
+	describe("Peloton", function () {
 		before(function (done) {
 			var rm = new RaceManager({ interval: 1, delay: 10 });
 			var flat_course = new Map({gradients: [[0, 0], [15, 0]]}); // 15 km flat
@@ -108,6 +108,8 @@ describe("Road Test", function () {
 		it("Peloton is together after 8km with Time-trialer leading", function (done) {
 			this.sprinter.showStats();
 			this.tt.showStats();
+
+			expect(this.rm.getPelotonSize()).to.be(2);
 			expect(this.rm.getPelotonRange()).to.be.below(4);
 			expect(this.tt.getDistance()).to.be.above(this.sprinter.getDistance());
 
@@ -118,7 +120,7 @@ describe("Road Test", function () {
 			this.rm.runToFinish({ callback: done });
 		});
 
-		it("Time-trialer speeds up and drops Sprinter", function () {
+		it("Peloton speeds up and drops Sprinter", function () {
 			this.sprinter.showStats();
 			this.tt.showStats();
 
@@ -140,7 +142,7 @@ describe("Road Test", function () {
 			this.rm.addRider(this.sprinter);
 			this.rm.addRider(this.climber);
 
-			var tv = new TopView( { container: $("#race-view") } );
+			var tv = new TopView( { container: $("#race-view"), disabled: true } );
 
 			this.rm.addView(tv);
 
@@ -223,8 +225,7 @@ describe("Road Test", function () {
 			rm.addRider(this.tt23);
 			rm.addRider(this.tt24);
 
-//			this.group1 = rm.makeGroup({ members: [this.tt11, this.tt12, this.tt13, this.tt14], effort: { power: 375 }, timeInFront: 10 });
-			this.group1 = rm.makeGroup({ members: [this.tt11, this.tt12], effort: { power: 375 }, timeInFront: 10 });
+			this.group1 = rm.makeGroup({ members: [this.tt11, this.tt12, this.tt13, this.tt14], effort: { power: 375 }, timeInFront: 10 });
 			this.group2 = rm.makeGroup({ members: [this.tt21, this.tt22, this.tt23, this.tt24], effort: { power: 375 }, timeInFront: 10 });
 
 			this.rm = rm;
@@ -233,7 +234,7 @@ describe("Road Test", function () {
 				container: $("#race-view"),
 				focus: { group: this.group2 },
 				zoom: 1000,
-				disabled: false
+				disabled: true
 			});
 
 			this.rm.addView(tv);
@@ -246,6 +247,87 @@ describe("Road Test", function () {
 			this.group2.showStats();
 			expect(this.group1.getGroupAverageSpeed()).to.be.above(this.group2.getGroupAverageSpeed());
 			expect(this.group1.getAverageFinishTime()).to.be.below(this.group2.getAverageFinishTime());
+		});
+	});
+
+	describe.only("Above and below drafting speed", function () {
+		before(function (done) {
+			var rm = new RaceManager({interval: 1, delay: 100});
+
+			var gradient = .10;
+
+			var course = new Map({
+				gradients: [
+					[0, 0],
+					[15, 0],
+					[15, gradient],
+				]
+			});         // 15km flat, 15km uphill
+
+			rm.setMap(course);
+
+			var new_riders = {};
+
+			makeBasicRiders(new_riders);
+			this.tt1 = new_riders.tt;
+			this.tt1.options.name = "1G1R1";
+
+			makeBasicRiders(new_riders);
+			this.tt2 = new_riders.tt;
+			this.tt2.options.name = "2G1R2";
+
+			makeBasicRiders(new_riders);
+			this.tt3 = new_riders.tt;
+			this.tt3.options.name = "3G1R3";
+
+			makeBasicRiders(new_riders);
+			this.tt4 = new_riders.tt;
+			this.tt4.options.name = "4G1R4";
+
+			rm.addRider(this.tt1);
+			rm.addRider(this.tt2);
+			rm.addRider(this.tt3);
+			rm.addRider(this.tt4);
+
+			this.group1 = rm.makeGroup({
+				members: [this.tt1, this.tt2, this.tt3, this.tt4],
+				effort: {power: 375},
+				timeInFront: 10
+			});
+
+			this.rm = rm;
+
+			var tv = new TopView({
+				container: $("#race-view"),
+				focus: {group: this.group1},
+				zoom: 1000,
+				disabled: true
+			});
+
+			this.rm.addView(tv);
+
+			this.rm.runTo({km: 15, callback: done});
+		});
+
+		it("On the flat section, speed should be above 12km/h with riders drafting", function () {
+			expect(this.group1.getGroupAverageSpeed()).to.be.within(40, 60);
+		});
+
+		it("On the flat, the only time they're not drafting is when they're pulling", function (done) {
+			expect(this.tt1.stats.nondrafting).to.equal(this.tt1.stats.pulls);
+
+			this.group1.clearExtraStats();
+
+			this.rm.runToFinish({callback: done});
+		});
+
+		it("On the 10% gradient, there should be less drafting due to slow speeds", function () {
+			var avgUphillSpeed = this.rm.getRiderAverageSpeedBetween(this.tt1, -15, 0);
+			expect(avgUphillSpeed).to.be.within(11, 14);
+
+			var nondrafting = this.tt1.stats.nondrafting - this.tt1.stats.pulls;
+			var difference_due_to_slow_speed = nondrafting - this.tt1.stats.drafting;
+			expect(difference_due_to_slow_speed).to.be.within(-100, 100);
 		});
 	});
 
@@ -452,7 +534,7 @@ describe("Road Test", function () {
 
 	describe("Group versus Breakaway", function () {
 		before(function (done) {
-			var rm = new RaceManager( { interval: 1, delay: 100 } );
+			var rm = new RaceManager( { interval: 1, delay: 20 } );
 
 			var gradient = .08;//0.08;
 
@@ -522,7 +604,9 @@ describe("Road Test", function () {
 			rm.addRider(this.tt5);
 			rm.addRider(this.tt6);
 
-			this.group = rm.makeGroup({ members: [this.tt2, this.tt3, this.tt4, this.tt5, this.tt6], effort: { power: 345 }, timeInFront: 10 });
+			rm.getPeloton().dropRider(this.tt_solo);
+
+			this.group = rm.makeGroup({ members: [this.tt2, this.tt3, this.tt4, this.tt5, this.tt6], effort: { power: 350 }, timeInFront: 30 });
 
 			this.tt_solo.setEffort({ power: 340 });
 
@@ -537,17 +621,15 @@ describe("Road Test", function () {
 
 			this.rm.addView(tv);
 
-			this.rm.runTo( { km: 70, callback: done });
+			this.rm.runTo( { km: 75, callback: done });
 		});
 
 		it("Group stays together after 80km", function () {
-			expect(this.rm.getDistanceBetween(this.tt2, this.tt3)).to.be.below(.04);
-			expect(this.rm.getDistanceBetween(this.tt2, this.tt4)).to.be.below(.04);
-			expect(this.rm.getDistanceBetween(this.tt2, this.tt5)).to.be.below(.04);
+			expect(this.group.getDistanceBetween()).to.be.below(20);
 		});
 
-		it("With 20km to the finish, the group riders should have more energy than the solo rider", function () {
-			this.rm.runTo( { km: -20 });
+		it("With 10km to the finish, the group riders should have more energy than the solo rider", function () {
+			this.rm.runTo( { km: -10 });
 
 			expect(this.tt_solo.getFuelPercent()).to.be.below(this.tt2.getFuelPercent());
 			expect(this.tt_solo.getFuelPercent()).to.be.below(this.tt3.getFuelPercent());
@@ -555,17 +637,11 @@ describe("Road Test", function () {
 			expect(this.tt_solo.getFuelPercent()).to.be.below(this.tt5.getFuelPercent());
 		});
 
-		it("The gap should be about 1 minute between breakaway and peloton", function () {
-			this.tt_solo.showStats();
-			this.tt2.showStats();
-			this.tt3.showStats();
-			this.tt4.showStats();
-			this.tt5.showStats();
-
+		it("The gap should be less than 2 minutes between breakaway and peloton", function () {
+			this.group.showStats();
 			var gap = this.rm.getTimeGapBetween(this.tt_solo, this.tt2);
-			console.log("gap = " + gap);
 
-			expect(gap).to.be.within(.5 * 60, 1.5 * 60);
+			expect(gap).to.be.within(1, 2.2 * 60);
 		});
 
 		it("Group riders haven't used up as much energy as the solo rider", function () {
@@ -577,10 +653,10 @@ describe("Road Test", function () {
 
 		it("Group finishes with roughly the same time", function () {
 			// tt ups his tempo (but not so much he bonks)
-			this.tt_solo.setEffort({ power: 370 });
+			this.tt_solo.setEffort({ power: 390 });
 
 			// group speeds up to catch breakaway rider
-			this.group.setOptions({ effort: { power: 475 } });
+			this.group.setOptions({ effort: { power: 515 }, timeInFront: 10 });
 
 			this.rm.runToFinish();
 
@@ -589,17 +665,17 @@ describe("Road Test", function () {
 			expect(this.rm.getTimeGapBetween(this.tt2, this.tt5)).to.be.below(3);
 		});
 
-		it("Group finishes with the last 8km with an average speed of 50km/h", function () {
-			var avg = this.rm.getRiderAverageSpeedBetween(this.tt2, -8, 0);
-			console.log("tt2 finishing average speed = " + avg);
+		it("Group finishes with the last 8km with a faster average speed (around 56km/h)", function () {
+			var group_avg = this.rm.getRiderAverageSpeedBetween(this.tt2, -8, 0);
 
-			avg = this.rm.getRiderAverageSpeedBetween(this.tt_solo, -8, 0);
-			console.log("tt_solo finishing average speed = " + avg);
+			var solo_avg = this.rm.getRiderAverageSpeedBetween(this.tt_solo, -8, 0);
+
+			expect(group_avg).to.be.above(solo_avg);
+			expect(group_avg).to.be.within(54, 57);
+			expect(solo_avg).to.be.within(48, 52);
 		});
 
-		it("Breakaway rider gets caught by group by about 25-50 seconds", function () {
-			console.log("****");
-
+		it("Breakaway rider gets caught by group by less than 10 seconds", function () {
 			this.tt_solo.showStats();
 			this.tt2.showStats();
 			this.tt3.showStats();
@@ -612,7 +688,7 @@ describe("Road Test", function () {
 			expect(this.tt4.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 			expect(this.tt5.getTimeInSeconds()).to.be.below(this.tt_solo.getTimeInSeconds());
 
-			expect(this.rm.getTimeGapBetween(this.tt2, this.tt_solo)).to.be.within(25, 50);
+			expect(this.rm.getTimeGapBetween(this.tt2, this.tt_solo)).to.be.within(0, 10);
 		});
 	});
 
@@ -646,7 +722,7 @@ describe("Road Test", function () {
 			this.rm.addRider(this.sprinter);
 			this.rm.addRider(this.climber);
 
-			var tv = new TopView( { container: $("#race-view") } );
+			var tv = new TopView( { container: $("#race-view"), disabled: true } );
 
 			this.rm.addView(tv);
 
@@ -681,7 +757,7 @@ describe("Road Test", function () {
 				container: $("#race-view"),
 				focus: { rider: this.tt },
 				zoom: 200,
-				disabled: false
+				disabled: true
 			});
 
 			this.rm.addView(tv);

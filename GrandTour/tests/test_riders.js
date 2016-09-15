@@ -731,7 +731,7 @@ describe("Grand Tour", function () {
 			this.rm.runTo( { km: 70, callback: done });
 		});
 
-		it("Group stays together after 80km", function () {
+		it("Group stays together after 70km", function () {
 			expect(this.rm.getDistanceBetween(this.tt2, this.tt3)).to.be.below(.04);
 			expect(this.rm.getDistanceBetween(this.tt2, this.tt4)).to.be.below(.04);
 			expect(this.rm.getDistanceBetween(this.tt2, this.tt5)).to.be.below(.04);

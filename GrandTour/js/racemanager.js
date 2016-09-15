@@ -280,6 +280,10 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 
 			for (var i = 0; i < riderArray.length; i++) {
 				var rider = riderArray[i];
+				var previousGroup = rider.getGroup();
+				if (previousGroup) {
+					previousGroup.dropRider(rider);
+				}
 				rider.setGroup(g);
 			}
 
@@ -407,6 +411,10 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 			this.paused = !this.paused;
 		},
 
+		getPeloton: function () {
+			return this.peloton;
+		},
+
 		getPelotonRange: function () {
 			return this.peloton.getDistanceBetween();
 		},
@@ -417,6 +425,10 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 
 		getPelotonSize: function () {
 			return this.peloton.getSize();
+		},
+
+		getPelotonRidersInOrder: function () {
+			return this.peloton.getRidersInOrder();
 		}
 	};
 

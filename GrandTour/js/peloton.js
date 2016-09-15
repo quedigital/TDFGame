@@ -44,6 +44,8 @@ define(["jquery", "./group"], function ($, Group) {
 					this.adjustPowerToReachPosition(rider, desiredPos, gradient);
 
 					rider.step(gradient, distanceToFinish);
+
+					this.updateRiderDraftingStatus(rider, leader);
 				}
 			}
 

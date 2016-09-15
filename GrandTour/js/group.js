@@ -1,5 +1,9 @@
 define([], function () {
-	var CHANGE_DURATION = 10;
+	var DROP_DISTANCE = .02;        // 14 meters
+
+	function byDistance (a, b) {
+		return b.getDistance() - a.getDistance();
+	}
 
 	function Group (options) {
 		if (options === undefined) options = {};
@@ -20,6 +24,10 @@ define([], function () {
 	}
 
 	Group.prototype = {
+		getName: function () {
+			return this.options.name == undefined ? "Group" : this.options.name;
+		},
+
 		reset: function () {
 			this.currentLeaderIndex = 0;
 			this.timeInFront = 0;
@@ -58,7 +66,16 @@ define([], function () {
 		},
 
 		prestep: function (raceManager) {
-			// check for dropped riders here?
+			// check for dropped riders here (10 meters behind last rider?)
+			var riders = this.getRidersInOrder();
+			if (riders.length > 1) {
+				var last = riders[riders.length - 1];
+				var next_to_last = riders[riders.length - 2];
+				if (next_to_last.getDistance() - last.getDistance() >= DROP_DISTANCE) {
+					console.log("Drop " + last.options.name + " from " + this.getName() + " at " + last.getDistance());
+					this.dropRider(last);
+				}
+			}
 		},
 
 		step: function (raceManager) {
@@ -118,6 +135,9 @@ define([], function () {
 						rider.step(gradient, distanceToFinish);
 					}
 				}
+
+				rider.stats.nondrafting += rider.isDrafting() ? 0 : 1;
+				rider.stats.drafting += rider.isDrafting() ? 1 : 0;
 			}
 
 			this.timeInFront++;
@@ -143,7 +163,7 @@ define([], function () {
 				power = rider.lookupPowerForDistance(speed_to_maintain, gradient);
 			}
 
-			if (rider != this.getGroupLeader()) {
+			if (rider.isDrafting()) {
 				// drafting reduces actual power requirement [but power is not linear and this could make them go slower]
 				power *= Rider.DRAFT_PERCENT;
 			}
@@ -180,7 +200,9 @@ define([], function () {
 					counter++;
 			}
 
-			return undefined;
+			// no current leader (maybe he got dropped?)
+			this.currentLeaderIndex = 0;
+			return this.options.members[this.currentLeaderIndex];
 		},
 
 		setInitialGroupOrder: function () {
@@ -233,6 +255,10 @@ define([], function () {
 		setOptions: function (options) {
 			if (options.effort) {
 				this.options.effort = options.effort;
+			}
+
+			if (options.timeInFront) {
+				this.options.timeInFront = options.timeInFront;
 			}
 		},
 
@@ -354,7 +380,7 @@ define([], function () {
 				total += rider.getFuelPercent();
 			});
 
-			return total;
+			return total / this.options.members.length;
 		},
 
 		showStats: function () {
@@ -362,9 +388,20 @@ define([], function () {
 				rider.showStats();
 			});
 
-			var s = (this.options.name == undefined ? "  Group: " : "  " + this.options.name + " Group: ") + "Avg Speed: " + (Math.round(this.getGroupAverageSpeed() * 10) / 10) + "kmh  Fuel: " + Math.round(this.getRemainingFuel()) + "%";
+			var s = (this.options.name == undefined ? "  Group: " : "  " + this.options.name + " Group: ") + "Avg Speed: " + (Math.round(this.getGroupAverageSpeed() * 10) / 10) + "kmh  Avg Fuel: " + Math.round(this.getRemainingFuel()) + "%";
 
 			console.log(s);
+		},
+
+		clearExtraStats: function () {
+			$.each(this.options.members, function (index, rider) {
+				rider.clearExtraStats();
+			});
+		},
+
+		getRidersInOrder: function () {
+			var riders = this.options.members.slice().sort(byDistance);
+			return riders;
 		}
 	};
 

@@ -1,6 +1,8 @@
 define(["d3"], function (d3) {
 	var LOOKUP_STARTING_POWER = 10;
 
+	var MIN_DRAFTING_SPEED = 12;    // 12 km/h
+
 	// from https://mycurvefit.com/
 	// for max power output (fits Andrei Greipel's numbers from the Tour of Flanders)
 	// 2s   5s   60s    300s  1200s   6hrs (21600s)
@@ -237,7 +239,7 @@ define(["d3"], function (d3) {
 
 			this.group = undefined;
 
-			this.stats = { pulls: 0 };
+			this.clearExtraStats();
 
 			this.powerLookup = {};
 
@@ -301,6 +303,10 @@ define(["d3"], function (d3) {
 
 		isGroupLeader: function () {
 			return this.group && this.group.getGroupLeader() == this;
+		},
+
+		isDrafting: function () {
+			return this.isInGroup() && !this.isGroupLeader() && this.getCurrentSpeedInKMH() > MIN_DRAFTING_SPEED;
 		},
 
 		// step 1 second
@@ -376,7 +382,7 @@ define(["d3"], function (d3) {
 
 		getDistanceFromPower: function (power, gradient) {
 			// drafting uses less power but goes just as far (ie, use non-reduced power levels for distance calculations)
-			if (this.isInGroup() && !this.isGroupLeader()) {
+			if (this.isDrafting()) {
 				power *= (1.0 / Rider.DRAFT_PERCENT);
 			}
 
@@ -462,7 +468,7 @@ define(["d3"], function (d3) {
 			var multiplier = this.getMultiplierForPower(this.currentPower);
 
 			var powerWithDraft = this.currentPower;
-			if (this.isInGroup() && !this.isGroupLeader()) {
+			if (this.isDrafting()) {
 				powerWithDraft *= Rider.DRAFT_PERCENT;
 			}
 
@@ -607,8 +613,12 @@ define(["d3"], function (d3) {
 			var s = this.options.name + ": " + this.getTimeAsString() + " @ " + Math.round(this.getDistance() * 1000) / 1000 + "km " + Math.round(this.getFuelPercent()) + "% (" + Math.round(this.getAverageSpeed()) + "kmh, " + Math.round(this.getAveragePower()) + " watts)";
 			console.log(s);
 
-			// tracks: pulls at front
-			//console.log(this.stats);
+			// tracks: pulls at front, drafting turns, non-drafting turns
+			console.log(this.stats);
+		},
+
+		clearExtraStats: function () {
+			this.stats = { pulls: 0, drafting: 0, nondrafting: 0 };
 		},
 
 		getCurrentPower: function () {

@@ -1,7 +1,8 @@
-// TODO: Peloton = special form of group (with no pace line cycling) with most riders at the front [how to determine] setting the speed
+// TODO: what is happening with the riders' positioning at the course gradient boundaries?
+// TODO: don't have runToTarget call itself (kind of an infinite recursion thing going on)
+// TODO: how to move up in the peloton to control its speed?
 // TODO: test to see what happens when riders can't get onto the paceline
-// TODO: riders getting dropped from groups
-// TODO: use physics to determine rider side-to-side positioning
+// TODO: use physics to determine rider side-to-side positioning [p2.js or custom collision code for x-axis only]
 // TODO: Group leader-of-the-moment can set the group's tempo
 // TODO: in-game breakaway calculator
 // TODO: power is reduced, via easing function, when energy is below 20% (and player avatar starts sweating)
@@ -109,3 +110,7 @@ rolling course
 // DONE: groups with a dedicated leader pulling (ie, non-switching) [sort of works right now]
 // DONE: tests for groups of other sizes
 // DONE: getGroupLeader formula might not be right for groups of other sizes
+// DONE: Peloton = special form of group (with no pace line cycling) with most riders at the front [how to determine] setting the speed
+// DONE: riders getting dropped from groups [after falling 10m behind last rider]
+// DONE: test of non-drafting speed
+// DONE: drafting only works above a set speed

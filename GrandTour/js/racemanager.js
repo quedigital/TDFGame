@@ -245,28 +245,43 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 		runToTarget: function () {
 			var allFinished = false;
 
-			if (!this.targetReached()) {
-				allFinished = this.doStep();
-			} else {
-				allFinished = true;
-			}
+			if (this.target.callback && this.hasActiveViews()) {
+				// async
 
-			if (!allFinished) {
-				var doTimeout = false;
-				this.currentFrameInterval++;
-				if (this.currentFrameInterval >= this.frameInterval) {
-					doTimeout = true;
-					this.currentFrameInterval = 0;
-				}
-
-				if (this.target.callback && doTimeout && this.hasActiveViews()) {
-					// async
-					setTimeout($.proxy(this.runToTarget, this), this.frameDelay);
+				if (!this.targetReached()) {
+					allFinished = this.doStep();
 				} else {
-					// sync
-					this.runToTarget();
+					allFinished = true;
+				}
+
+				if (!allFinished) {
+					var doTimeout = false;
+					this.currentFrameInterval++;
+					if (this.currentFrameInterval >= this.frameInterval) {
+						doTimeout = true;
+						this.currentFrameInterval = 0;
+					}
+
+					if (doTimeout)
+						setTimeout($.proxy(this.runToTarget, this), this.frameDelay);
+					else
+						this.runToTarget();
+				} else {
+					if (this.target.callback) {
+						this.target.callback();
+					}
 				}
 			} else {
+				// sync
+
+				while (!allFinished) {
+					if (!this.targetReached()) {
+						allFinished = this.doStep();
+					} else {
+						allFinished = true;
+					}
+				}
+
 				if (this.target.callback) {
 					this.target.callback();
 				}

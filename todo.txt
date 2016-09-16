@@ -1,12 +1,12 @@
-// TODO: what is happening with the riders' positioning at the course gradient boundaries?
-// TODO: don't have runToTarget call itself (kind of an infinite recursion thing going on)
+// TODO: use a longer, invisible power curve for the "adjusted" power curve
+// TODO: UI for "attack", "join group", "protect rider", "sprint", "sprint joystick", "[fun] power setting", and "cooperate/hang back", "move up/down in peloton"
 // TODO: how to move up in the peloton to control its speed?
 // TODO: test to see what happens when riders can't get onto the paceline
 // TODO: use physics to determine rider side-to-side positioning [p2.js or custom collision code for x-axis only]
 // TODO: Group leader-of-the-moment can set the group's tempo
+// TODO: team with most riders "pulling" in a group get to control it (ie, set its pace)
 // TODO: in-game breakaway calculator
 // TODO: power is reduced, via easing function, when energy is below 20% (and player avatar starts sweating)
-// TODO: UI for "attack", "join group", "protect rider", "sprint", "sprint joystick", "[fun] power setting"
 // TODO: UI elements for: leading group distance to finish, gaps to other groups
 // TODO: way to show gradient in top view (shaded roads?)
 // TODO: top view option: show entire race
@@ -15,12 +15,10 @@
 // TODO: rethink redzone and fatigue: maybe energy can go negative; it just reduces your power (ie, no "redzone" counter) [based on negative fuel percentage and base power?]
 // TODO: average speed from last time interval for smoothing?
 // TODO: check flat stage time trial (from last year's TdF) for Sprinter and Climber times (to check power curves)
-// TODO: drafting only works above a specific speed?
 // TODO: numbers in breakaway increase advantage? [this seems to happen naturally; double-check!]
 // TODO: sprinter may use too much energy at 1600 watts
 // TODO: burst energy vs. overall energy? [like the Cycling game]
 // TODO: crashing on curves
-// TODO: team with most riders "pulling" in a group get to control it (ie, set its pace)
 // TODO: rider modeling/visualizer
 // TODO: add a debug rider UI to the test engine
 // TODO: time trials!
@@ -114,3 +112,5 @@ rolling course
 // DONE: riders getting dropped from groups [after falling 10m behind last rider]
 // DONE: test of non-drafting speed
 // DONE: drafting only works above a set speed
+// DONE: don't have runToTarget call itself (kind of an infinite recursion thing going on)
+// DONE: what is happening with the riders' positioning at the course gradient boundaries? [going from uphill to flat, same power output jumps lead rider ahead -- may not be a problem]

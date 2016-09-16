@@ -45,7 +45,8 @@ define(["jquery", "./group"], function ($, Group) {
 
 					rider.step(gradient, distanceToFinish);
 
-					this.updateRiderDraftingStatus(rider, leader);
+					rider.stats.nondrafting += rider.isDrafting() ? 0 : 1;
+					rider.stats.drafting += rider.isDrafting() ? 1 : 0;
 				}
 			}
 

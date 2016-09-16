@@ -106,21 +106,21 @@ define(["./view", "easeljs", "jquery"], function (View) {
 					var x = (rider.getDistance() - center_distance) * ratio + (WIDTH * .5);
 
 					riderGraphic.x = x;
-					riderGraphic.y = rider.y ? 250 + rider.y : 100 + index * 55;
+					riderGraphic.y = rider.y ? 150 + rider.y : 100 + index * 55;
 
 					var nick = rider.options.name.substr(0, 1).toUpperCase();
 					me.riderStats[index].label.text = rider.isGroupLeader() ? nick + "*" : nick;
-					//me.riderStats[index].fuelText.text = Math.round(rider.getFuelPercent()) + "%";
+					me.riderStats[index].fuelText.text = Math.round(rider.getFuelPercent()) + "%";
 					//me.riderStats[index].fuelText.text = Math.round(rider.getDistance() * 100) / 100;
 					//me.riderStats[index].powerText.text = Math.round(rider.getCurrentSpeedInKMH()) + "km/h";
-					me.riderStats[index].fuelText.text = "desired: " + rider.extra;
+					//me.riderStats[index].fuelText.text = "desired: " + rider.extra;
 					//me.riderStats[index].powerText.text = Math.round(rider.getCurrentPower()) + "W";
 					//me.riderStats[index].powerText.text = rider.orderInGroup + " @ " + Math.round(rider.getCurrentPower()) + "W";;
-					//me.riderStats[index].powerText.text = rider.currentGradient;
-					me.riderStats[index].powerText.text = "actual: " + Math.round(rider.getDistance() * 1000);
+					me.riderStats[index].powerText.text = rider.currentGradient;
+					//me.riderStats[index].powerText.text = "actual: " + Math.round(rider.getDistance() * 1000);
 
-					me.riderStats[index].line4.text = rider.orderInGroup + " @ " + Math.round(rider.getCurrentPower()) + "W";
-					//me.riderStats[index].line4.text = Math.round(rider.getCurrentPower()) + "W";
+					//me.riderStats[index].line4.text = rider.orderInGroup + " @ " + Math.round(rider.getCurrentPower()) + "W";
+					me.riderStats[index].line4.text = Math.round(rider.getCurrentPower()) + "W";
 				});
 
 				this.stage.update();

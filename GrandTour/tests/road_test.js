@@ -154,6 +154,79 @@ describe("Road Test", function () {
 		});
 	});
 
+	describe.only("Boundary checking", function () {
+		before(function (done) {
+			var rm = new RaceManager( { interval: 1, delay: 500 } );
+
+			var gradient = .08;
+
+			var course = new Map({gradients: [
+				[0, 0],
+				[10, 0],
+				[5, gradient],
+				[5,0],
+				[5, -gradient],
+				[10, 0],
+				[5, gradient],
+				[5,0],
+				[5, -gradient],
+				[10, 0],
+				[5, gradient],
+				[5,0],
+				[5, -gradient],
+				[20, 0]
+			]});         // 95 km with 3 hills and a finishing straight
+
+			rm.setMap(course);
+
+			var new_riders = {};
+
+			makeBasicRiders(new_riders);
+			this.tt11 = new_riders.tt;
+			this.tt11.options.name = "1G1R1";
+
+			makeBasicRiders(new_riders);
+			this.tt12 = new_riders.tt;
+			this.tt12.options.name = "2G1R2";
+
+			makeBasicRiders(new_riders);
+			this.tt13 = new_riders.tt;
+			this.tt13.options.name = "3G1R3";
+
+			makeBasicRiders(new_riders);
+			this.tt14 = new_riders.tt;
+			this.tt14.options.name = "4G1R4";
+
+			rm.addRider(this.tt11);
+			rm.addRider(this.tt12);
+			rm.addRider(this.tt13);
+			rm.addRider(this.tt14);
+
+			this.group1 = rm.makeGroup({ members: [this.tt11, this.tt12, this.tt13, this.tt14], effort: { power: 375 }, timeInFront: 10 });
+
+			this.rm = rm;
+
+			var tv = new TopView({
+				container: $("#race-view"),
+				focus: { group: this.group1 },
+				zoom: 1000,
+				disabled: true
+			});
+
+			this.tv = tv;
+
+			this.rm.addView(tv);
+
+			this.rm.runTo({ km: 14.98, callback: done });
+		});
+
+		it("Let's see what's going on at the gradient changes", function (done) {
+			this.tv.setDisabled(false);
+
+			this.rm.runTo({ km: 15.1, callback: done });
+		});
+	});
+
 	describe("4-Person Collaborating Group versus Non-collaborating", function () {
 		before(function (done) {
 			var rm = new RaceManager( { interval: 1, delay: 100 } );
@@ -250,7 +323,7 @@ describe("Road Test", function () {
 		});
 	});
 
-	describe.only("Above and below drafting speed", function () {
+	describe("Above and below drafting speed", function () {
 		before(function (done) {
 			var rm = new RaceManager({interval: 1, delay: 100});
 

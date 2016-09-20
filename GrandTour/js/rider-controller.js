@@ -1,4 +1,6 @@
 define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, Raphael, d3) {
+	var WAVE_RADIUS = 8;
+
 	function dragMoveListener (event) {
 		var target = event.target,
 		// keep the dragged position in the data-x/data-y attributes
@@ -58,6 +60,20 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 		}
 	}
 
+	function getEnergyWaveString () {
+		var s = "M0,0";
+		var yy = 0;
+
+		for (var i = 0; i < 6 * Math.PI; i += .1) {
+			var rads = i;
+			var xx = i * WAVE_RADIUS * .5;
+			yy = Math.sin(rads) * WAVE_RADIUS;
+			s += "L" + Math.floor(xx) + "," + Math.floor(yy);
+		}
+
+		return s;
+	}
+
 	function RiderController (options) {
 		this.options = options;
 
@@ -93,12 +109,8 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 
 		this.drawPowerController();
 
-		this.powerKnob = this.paper.circle(50, 40, 20);
-		this.powerKnob.attr("fill", "red");
-		this.powerKnob.mousedown($.proxy(this.onTouchKnob, this));
-
-		this.paper.canvas.onmousemove = $.proxy(this.onMouseMove, this);
-		this.paper.canvas.onmouseup = $.proxy(this.onMouseUp, this);
+		$(window).on("mousemove", $.proxy(this.onMouseMove, this));
+		$(window).on("mouseup", $.proxy(this.onMouseUp, this));
 
 		this.setPowerKnobTo(.5);
 
@@ -139,27 +151,129 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 		drawPowerController: function () {
 			var h = this.height, w = this.width;
 
-			var pts = [50, h - 50, w - 100, h - 0, w - 50, 100]
+			var pts = [50, h - 50, w - 100, h - 0, w - 50, 100];
 
 			this.powerPath = "M" + pts[0] + "," + pts[1] + "S" + pts[2] + "," + pts[3] + "," + pts[4] + "," + pts[5];
 
 			this.powerCurve = this.paper.path(this.powerPath);
 			this.powerCurve.attr({ stroke: "blue", "stroke-width": 5 });
 			this.powerCurveLength = this.powerCurve.getTotalLength();
+
+			var fake_pts = [50, h - 50, w - 40, h + 10, w - 43, 0];
+			var fakePowerPath = "M" + fake_pts[0] + "," + fake_pts[1] + "S" + fake_pts[2] + "," + fake_pts[3] + "," + fake_pts[4] + "," + fake_pts[5];
+			this.fakePowerCurve = this.paper.path(fakePowerPath);
+			this.fakePowerCurve.attr({ stroke: "none" });
+			this.fakePowerCurveLength = this.fakePowerCurve.getTotalLength();
+
+			this.knob = this.paper.circle(50, 40, 20);
+			this.knob.attr({ fill: "red", stroke: "none" });
+			this.knob.mousedown($.proxy(this.onTouchKnob, this));
+
+			this.powerDot = this.paper.circle(0, 0, 3);
+			this.powerDot.attr({ fill: "yellow", stroke: "none" });
+			this.powerDot.hide();
+
+			this.powerKnob = this.paper.set();
+			this.powerKnob.push(this.knob, this.powerDot);
+		},
+
+		drawEnergyPathTo: function (x, y) {
+			var cx = 0, cy = 0;
+
+			if (this.powerKnob) {
+				cx = this.knob.attr("cx");
+				cy = this.knob.attr("cy");
+			}
+
+			if (this.knobPoint) {
+				cx += this.knobPoint.x;
+				cy += this.knobPoint.y;
+			}
+
+			var dx = x - cx, dy = y - cy;
+			var angle = Math.floor(Math.atan2(dy, dx) / Math.PI * 180);
+			var len = Math.sqrt(dx * dx + dy * dy);
+
+			if (this.energyPath == undefined) {
+				this.energyPathString = getEnergyWaveString();
+				this.energyPath = this.paper.path(this.energyPathString);
+				this.glow = this.energyPath.glow( { color: "orange" } );
+
+				this.paper.customAttributes.waving = function (scaling) {
+					var cx = this.data("cx"), cy = this.data("cy");
+					var angle = this.data("angle");
+					var s = "t" + cx + "," + cy + "r" + angle + ",0,0s" + scaling + ",0,0";
+					console.log(s);
+					this.transform(s);
+				};
+
+				this.energyPath.attr({ waving: "1 1" });
+			}
+
+			var xscale = len / (3 * Math.PI * WAVE_RADIUS);
+			var yscale = Math.min(1, Math.max(.1, 40 / len));
+
+			if (len > 3) {
+				this.energyPath.attr({stroke: "orange", "stroke-width": 3 });
+				//this.energyPath.transform("t" + cx + "," + cy + "r" + angle + ",0,0s" + xscale + "," + yscale + ",0,0");
+				this.energyPath.transform("t" + cx + "," + cy + "r" + angle + ",0,0s" + 1 + "," + 1 + ",0,0");
+				this.energyPath.data({ cx: cx, cy: cy, angle: angle });
+				this.glow.transform("t" + cx + "," + cy + "r" + angle + ",0,0s" + xscale + "," + yscale + ",0,0");
+				this.energyPath.toFront();
+				this.energyPath.show();
+				this.glow.show();
+				this.energyPath.animate( { waving: xscale + " " + yscale }, 1000, "elastic");
+			} else {
+				this.energyPath.hide();
+				this.glow.hide();
+			}
+		},
+
+		hideEnergyPath: function () {
+			if (this.energyPath) {
+				this.energyPath.hide();
+				this.glow.hide();
+			}
+			this.powerDot.hide();
 		},
 
 		setPowerKnobTo: function (percent) {
 			var pt = this.powerCurve.getPointAtLength(this.powerCurveLength * percent);
 			this.powerKnob.attr({ cx: pt.x, cy: pt. y });
+			this.currentSetting = percent;
 		},
 
 		onTouchKnob: function (event) {
 			this.knobActive = true;
+
+			var x = event.pageX - this.container.offset().left, y = event.pageY - this.container.offset().top;
+			var cx = this.knob.attr("cx"), cy = this.knob.attr("cy");
+			this.knobPoint = { x: x - cx, y: y - cy };
+
+			this.powerDot.transform("t" + this.knobPoint.x + "," + this.knobPoint.y);
+			this.powerDot.toFront();
+			this.powerDot.show();
+
+			//setTimeout($.proxy(this.animateWave, this), 1000);
+		},
+
+		animateWave: function () {
+			if (this.knobActive) {
+				this.energyPath.attr("waving", 0);
+				this.energyPath.animate({ waving: 30 }, 1000, $.proxy(this.animateWave, this));
+			}
 		},
 
 		onMouseMove: function (event) {
 			if (this.knobActive) {
-				var pt = closestPoint(this.powerCurve, [event.offsetX, event.offsetY]);
+				var lastSetting = this.currentSetting;
+
+				var x0 = this.container.offset().left, y0 = this.container.offset().top;
+				var px = event.pageX - x0, py = event.pageY - y0;
+				px -= this.knobPoint.x;
+				py -= this.knobPoint.y;
+
+				var pt = closestPoint(this.powerCurve, [px, py]);
 				var percent = 0;
 				if (pt[0] == undefined) {
 					var start = this.powerCurve.getPointAtLength(0);
@@ -169,19 +283,34 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 					percent = pt.length / this.powerCurveLength;
 				}
 
-				var adjustedPercent = d3.easeQuadIn(percent);
+				var fakept = closestPoint(this.fakePowerCurve, [px, py]);
+				var fakepercent = 0;
+				if (fakept[0] == undefined) {
+					var start = this.fakePowerCurve.getPointAtLength(0);
+					fakept[0] = start.x;
+					fakept[1] = start.y;
+				} else {
+					fakepercent = fakept.length / this.fakePowerCurveLength;
+				}
 
-				console.log("percent " + percent + " -> " + adjustedPercent);
+				if (percent < this.currentSetting) {
+					this.setPowerKnobTo(percent);
+				} else if (fakepercent > this.currentSetting) {
+					this.setPowerKnobTo(fakepercent);
+				}
 
-				var adjustedPoint = this.powerCurve.getPointAtLength(this.powerCurveLength * adjustedPercent);
+				var adjustedPercent = d3.easePolyIn(this.currentSetting, 5.0);
 
-				//this.powerKnob.attr({ cx: pt[0], cy: pt[1] });
-				this.powerKnob.attr({ cx: adjustedPoint.x, cy: adjustedPoint.y });
+				var watts = this.options.rider.getPowerFromEffort(adjustedPercent);
+
+				this.drawEnergyPathTo(px + this.knobPoint.x, py + this.knobPoint.y);
 			}
 		},
 
 		onMouseUp: function (event) {
 			this.knobActive = false;
+
+			this.hideEnergyPath();
 		}
 	});
 

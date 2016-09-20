@@ -523,6 +523,10 @@ define(["d3"], function (d3) {
 			this.currentPower = this.getMaxPower() * this.effort;
 		},
 
+		getPowerFromEffort: function (effort) {
+			return this.getMaxPower() * effort;
+		},
+
 		setEffort: function (val) {
 			if (val instanceof Object) {
 				if (val.power != undefined) {

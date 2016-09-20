@@ -1,4 +1,5 @@
-// TODO: use a longer, invisible power curve for the "adjusted" power curve
+// TODO: animate power handle
+// TODO: if power curve handle is too long and far away, it snaps, requiring a new mouse down
 // TODO: UI for "attack", "join group", "protect rider", "sprint", "sprint joystick", "[fun] power setting", and "cooperate/hang back", "move up/down in peloton"
 // TODO: how to move up in the peloton to control its speed?
 // TODO: test to see what happens when riders can't get onto the paceline
@@ -114,3 +115,6 @@ rolling course
 // DONE: drafting only works above a set speed
 // DONE: don't have runToTarget call itself (kind of an infinite recursion thing going on)
 // DONE: what is happening with the riders' positioning at the course gradient boundaries? [going from uphill to flat, same power output jumps lead rider ahead -- may not be a problem]
+// DONE: use a longer, invisible power curve for the "adjusted" power curve
+// DONE: make power handle react according to where in relation to the dot it's clicked
+// DONE: draw glow dot at point of touch for power handle

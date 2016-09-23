@@ -371,8 +371,8 @@ define(["d3"], function (d3) {
 				if (this.fueltank > 0) {
 					this.currentPower = Math.min(this.fueltank, attemptedPower);
 				} else {
-					// THEORY: when tank is empty, you go 95% of your recovery rate? And it gets worse?
-					this.currentPower = this.getRestingPower() * .95;
+					// THEORY: when tank is empty, you get 95% of your recovery rate? And it gets worse?
+					this.currentPower = Math.min(desired, this.getRestingPower() * .95);
 				}
 			} else if (this.currentPower > desired) {
 				// decelerating is immediate?
@@ -439,7 +439,10 @@ define(["d3"], function (d3) {
 			if (power > this.options.powerCurve[0]) {
 				return 1;
 			} else if (power < this.options.powerCurve[this.options.powerCurve.length - 1]) {
-				return POWER_INTERVALS[POWER_INTERVALS.length - 1];
+				// for power below the lowest threshold, return a straight linear extrapolation
+				var p = this.options.powerCurve[this.options.powerCurve.length - 1];
+				var d = POWER_INTERVALS[POWER_INTERVALS.length - 1];
+				return (p / power) * d;
 			}
 
 			var duration = this.getInterpolant(power);
@@ -454,10 +457,17 @@ define(["d3"], function (d3) {
 			if (power == 0)
 				return 0;
 
+			var base = this.getDurationForPower(this.getMinPower());
+			var thisPower = this.getDurationForPower(power);
+
+			var m = base / thisPower;
+
 			var duration = this.getDurationForPower(power);
 			var recovery = this.options.recovery * duration;
 
-			var m = (this.maxfuel + recovery) / (duration * power);
+			//var m = (this.maxfuel + recovery) / (duration * power);
+			//var m = (duration * power) / recovery;
+			//var m = (this.maxfuel / duration);
 
 			if (m < 0) m = 0;
 
@@ -496,6 +506,10 @@ define(["d3"], function (d3) {
 
 		getMaxPower: function () {
 			return this.options.powerCurve[0];
+		},
+
+		getMinPower: function () {
+			return this.options.powerCurve[this.options.powerCurve.length - 1];
 		},
 
 		getAcceleration: function () {
@@ -643,7 +657,7 @@ define(["d3"], function (d3) {
 
 		createPowerLookup: function () {
 			// gradient is multiplied by 100 (ie, .12 => 12)
-			for (var g = -12; g <= 12; g += 1) {
+			for (var g = -30; g <= 30; g += 1) {
 				var array = [];
 
 				for (var power = LOOKUP_STARTING_POWER; power <= this.getMaxPower(); power += 10) {

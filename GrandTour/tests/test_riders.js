@@ -123,6 +123,9 @@ describe("Grand Tour", function () {
 			rm.addRider(this.tt);
 			rm.addRider(this.custom_tt);
 
+			rm.escapeRider(this.tt);
+			rm.escapeRider(this.custom_tt);
+
 			// tt default =             [1200, 1000, 630, 535, 460, 400, 330]
 			this.custom_tt.setPowerCurve(1200, 1000, 660, 550, 480, 410, 330);
 
@@ -162,6 +165,34 @@ describe("Grand Tour", function () {
 
 			this.custom_tt.getTimeInSeconds().should.be.below(this.tt.getTimeInSeconds());
 			this.custom_tt.getAveragePower().should.be.within(470, 490);
+		});
+
+		it("Energy consumption corresponds to power output", function () {
+			var basePower = this.tt.getMinPower();
+			var mBase = this.tt.getMultiplierForPower(basePower);
+
+			var m1 = this.tt.getMultiplierForPower(100);
+			var m2 = this.tt.getMultiplierForPower(200);
+			var m3 = this.tt.getMultiplierForPower(300);
+			var m4 = this.tt.getMultiplierForPower(400);
+			var m5 = this.tt.getMultiplierForPower(500);
+			var m6 = this.tt.getMultiplierForPower(1200);
+
+			console.log("100 = " + m1);
+			console.log("200 = " + m2);
+			console.log("300 = " + m3);
+			console.log(basePower + " = " + mBase);
+			console.log("400 = " + m4);
+			console.log("500 = " + m5);
+			console.log("1200 = " + m6);
+
+			expect(mBase).to.equal(1);
+
+			expect(m1).to.be.below(m2);
+			expect(m2).to.be.below(m3);
+			expect(m3).to.be.below(m4);
+			expect(m4).to.be.below(m5);
+			expect(m5).to.be.below(m6);
 		});
 
 		it("Extreme power curve could have someone easily output 600W but maybe not other ranges", function () {

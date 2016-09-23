@@ -1,5 +1,9 @@
 define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, Raphael, d3) {
 	var WAVE_RADIUS = 8;
+	var SNAPPING_POINT = 250;
+	var MIN_EFFORT = .01;
+
+	var offset = 0;
 
 	function dragMoveListener (event) {
 		var target = event.target,
@@ -60,18 +64,43 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 		}
 	}
 
-	function getEnergyWaveString () {
+	function getEnergyWaveString (offset) {
 		var s = "M0,0";
 		var yy = 0;
 
-		for (var i = 0; i < 6 * Math.PI; i += .1) {
+		if (offset == undefined) offset = 0;
+
+		for (var i = 0; i < 6 * Math.PI; i += .5) {
 			var rads = i;
 			var xx = i * WAVE_RADIUS * .5;
-			yy = Math.sin(rads) * WAVE_RADIUS;
+			yy = Math.sin(rads + offset * 8) * WAVE_RADIUS;
 			s += "L" + Math.floor(xx) + "," + Math.floor(yy);
 		}
 
 		return s;
+	}
+
+	function convertEffortToVisualScale (effort) {
+		var p = (effort - MIN_EFFORT) / (1.0 - MIN_EFFORT);
+
+		// weight it more heavily toward the bottom of the scale
+		return d3.easeCubicOut(p);
+	}
+
+	function convertLinearScaleToVisualScale (percent) {
+		var p = (percent - MIN_EFFORT) / (1.0 - MIN_EFFORT);
+
+		return p;
+	}
+
+	function convertVisualScaleToEffort (percent) {
+		var reverseFunc = d3.easePolyOut.exponent(1/3);
+
+		var p = percent;
+		p = reverseFunc(p);
+		p = MIN_EFFORT + (p * (1.0 - MIN_EFFORT));
+
+		return p;
 	}
 
 	function RiderController (options) {
@@ -84,7 +113,12 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 		this.width = w;
 		this.height = h;
 
+		this.buttonStates = { up: false, down: false };
+
 		this.knobActive = false;
+
+		this.powerDisplay = $("<p>", { class: "power-display", text: "1400" });
+		this.container.append(this.powerDisplay);
 
 		/*
 		this.canvas = $("<canvas width=" + w + " height = " + h + ">");
@@ -114,6 +148,8 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 
 		this.setPowerKnobTo(.5);
 
+		setInterval($.proxy(this.onUpdate, this), 41);
+
 		/*
 		interact('.draggable')
 			.draggable({
@@ -138,6 +174,15 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 			this.height = h;
 
 			this.powerCurve.remove();
+			this.fakePowerCurve.remove();
+			this.knob.remove();
+			this.powerDot.remove();
+			this.powerKnob.remove();
+			this.arrow.remove();
+			this.riderStatus.remove();
+			this.upButton.remove();
+			this.downButton.remove();
+			this.cycleButton.remove();
 
 			this.paper.setSize(w, h);
 
@@ -175,6 +220,22 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 
 			this.powerKnob = this.paper.set();
 			this.powerKnob.push(this.knob, this.powerDot);
+
+			this.arrow = this.paper.image("images/arrow.png", 10, 10, 197, 150);
+			this.arrow.attr( { opacity: .5 } );
+			this.arrow.data( { centerX: 7, centerY: 75 } );
+			this.arrow.hide();
+
+			this.riderStatus = this.paper.image("images/rider-status.png", 10, 10, 300, 300);
+
+			this.upButton = this.paper.image("images/up-button.png", 360, 10, 100, 51);
+			this.upButton.mousedown($.proxy(this.onClickUp, this));
+
+			this.downButton = this.paper.image("images/down-button.png", 360, 370, 100, 51);
+			this.downButton.mousedown($.proxy(this.onClickDown, this));
+
+			this.cycleButton = this.paper.image("images/cycle-button.png", 200, 380, 50, 50);
+			this.cycleButton.mousedown($.proxy(this.onClickCycle, this));
 		},
 
 		drawEnergyPathTo: function (x, y) {
@@ -194,35 +255,45 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 			var angle = Math.floor(Math.atan2(dy, dx) / Math.PI * 180);
 			var len = Math.sqrt(dx * dx + dy * dy);
 
+			if (len > SNAPPING_POINT) {
+				this.onMouseUp();
+				return;
+			}
+
+			this.updateArrowPosition(cx - this.knobPoint.x, cy - this.knobPoint.y, angle, len);
+
 			if (this.energyPath == undefined) {
 				this.energyPathString = getEnergyWaveString();
 				this.energyPath = this.paper.path(this.energyPathString);
 				this.glow = this.energyPath.glow( { color: "orange" } );
 
-				this.paper.customAttributes.waving = function (scaling) {
+				var me = this;
+
+				this.paper.customAttributes.bouncing = function (xscale, yscale) {
 					var cx = this.data("cx"), cy = this.data("cy");
 					var angle = this.data("angle");
-					var s = "t" + cx + "," + cy + "r" + angle + ",0,0s" + scaling + ",0,0";
-					console.log(s);
+					var s = "t" + cx + "," + cy + "r" + angle + ",0,0s" + xscale + "," + yscale + ",0,0";
 					this.transform(s);
+					me.glow.transform(s);
 				};
 
-				this.energyPath.attr({ waving: "1 1" });
+				//this.energyPath.attr("bouncing", [0, 0]);
 			}
 
 			var xscale = len / (3 * Math.PI * WAVE_RADIUS);
 			var yscale = Math.min(1, Math.max(.1, 40 / len));
 
 			if (len > 3) {
-				this.energyPath.attr({stroke: "orange", "stroke-width": 3 });
-				//this.energyPath.transform("t" + cx + "," + cy + "r" + angle + ",0,0s" + xscale + "," + yscale + ",0,0");
-				this.energyPath.transform("t" + cx + "," + cy + "r" + angle + ",0,0s" + 1 + "," + 1 + ",0,0");
+				this.energyPath.attr({stroke: "#53D342", "stroke-width": 3 });
+				this.energyPath.transform("t" + cx + "," + cy + "r" + angle + ",0,0s" + xscale + "," + yscale + ",0,0");
+				//this.energyPath.transform("t" + cx + "," + cy + "r" + angle + ",0,0");
 				this.energyPath.data({ cx: cx, cy: cy, angle: angle });
 				this.glow.transform("t" + cx + "," + cy + "r" + angle + ",0,0s" + xscale + "," + yscale + ",0,0");
 				this.energyPath.toFront();
 				this.energyPath.show();
 				this.glow.show();
-				this.energyPath.animate( { waving: xscale + " " + yscale }, 1000, "elastic");
+				this.energyPath.stop();
+				//this.energyPath.animate( { bouncing: [xscale, yscale] }, 1000, "elastic");
 			} else {
 				this.energyPath.hide();
 				this.glow.hide();
@@ -235,11 +306,16 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 				this.glow.hide();
 			}
 			this.powerDot.hide();
+			this.arrow.hide();
 		},
 
 		setPowerKnobTo: function (percent) {
+			if (percent < 0) percent = 0;
+			else if (percent > 1) percent = 1;
+
 			var pt = this.powerCurve.getPointAtLength(this.powerCurveLength * percent);
 			this.powerKnob.attr({ cx: pt.x, cy: pt. y });
+
 			this.currentSetting = percent;
 		},
 
@@ -253,21 +329,10 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 			this.powerDot.transform("t" + this.knobPoint.x + "," + this.knobPoint.y);
 			this.powerDot.toFront();
 			this.powerDot.show();
-
-			//setTimeout($.proxy(this.animateWave, this), 1000);
-		},
-
-		animateWave: function () {
-			if (this.knobActive) {
-				this.energyPath.attr("waving", 0);
-				this.energyPath.animate({ waving: 30 }, 1000, $.proxy(this.animateWave, this));
-			}
 		},
 
 		onMouseMove: function (event) {
 			if (this.knobActive) {
-				var lastSetting = this.currentSetting;
-
 				var x0 = this.container.offset().left, y0 = this.container.offset().top;
 				var px = event.pageX - x0, py = event.pageY - y0;
 				px -= this.knobPoint.x;
@@ -293,24 +358,124 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 					fakepercent = fakept.length / this.fakePowerCurveLength;
 				}
 
+				var knob_percent = convertLinearScaleToVisualScale(percent);
+				var knob_fakepercent = convertLinearScaleToVisualScale(fakepercent);
+
+				var effort = undefined;
+
 				if (percent < this.currentSetting) {
-					this.setPowerKnobTo(percent);
+					this.setPowerKnobTo(knob_percent);
+					effort = convertVisualScaleToEffort(percent);
 				} else if (fakepercent > this.currentSetting) {
-					this.setPowerKnobTo(fakepercent);
+					this.setPowerKnobTo(knob_fakepercent);
+					effort = convertVisualScaleToEffort(fakepercent);
 				}
 
-				var adjustedPercent = d3.easePolyIn(this.currentSetting, 5.0);
+				if (effort != undefined) {
+					var watts = this.options.rider.getPowerFromEffort(effort);
 
-				var watts = this.options.rider.getPowerFromEffort(adjustedPercent);
+					this.options.rider.setEffort({power: watts});
+				}
 
 				this.drawEnergyPathTo(px + this.knobPoint.x, py + this.knobPoint.y);
+			}
+		},
+
+		updateStats: function () {
+			//var watts = this.options.rider.getCurrentPower();
+			var watts = this.options.rider.getPowerFromEffort(this.options.rider.getEffort());
+			this.powerDisplay.text(Math.floor(watts));
+
+			if (this.options.rider.isInGroup()) {
+				this.cycleButton.attr("opacity", 1);
+				var cycling = this.options.rider.isCooperating();
+				if (cycling) {
+					this.cycleButton.attr("src", "images/cycle-button.png");
+				} else {
+					this.cycleButton.attr("src", "images/cycle-button-off.png");
+				}
+			} else {
+				this.cycleButton.attr("opacity", .5);
 			}
 		},
 
 		onMouseUp: function (event) {
 			this.knobActive = false;
 
+			for (var each in this.buttonStates) {
+				this.buttonStates[each] = false;
+			}
+
 			this.hideEnergyPath();
+		},
+
+		onUpdate: function () {
+			if (this.knobActive) {
+				var s = getEnergyWaveString(offset++);
+				if (this.energyPath)
+					this.energyPath.attr("path", s);
+			} else {
+				var percent = convertEffortToVisualScale(this.options.rider.getEffort());
+				this.setPowerKnobTo(percent);
+			}
+
+			if (this.buttonStates["up"]) {
+				this.do_upButton();
+			} else if (this.buttonStates["down"]) {
+				this.do_downButton();
+			}
+
+			this.updateStats();
+		},
+
+		updateArrowPosition: function (x, y, angle, len) {
+			var cx = this.arrow.data("centerX"), cy = this.arrow.data("centerY");
+			var xx = x - cx;
+			var yy = y - cy;
+			var scaleX = len / 140, scaleY = Math.min(scaleX * .8,.3);
+
+			this.arrow.transform("t" + xx + "," + yy + "r" + angle + "," + cx + "," + cy + "s" + scaleX + "," + scaleY + "," + cx + "," + cy);
+			this.arrow.show();
+		},
+
+		onClickUp: function (event) {
+			this.buttonStates["up"] = true;
+
+			this.onUpdate();
+		},
+
+		onClickDown: function (event) {
+			this.buttonStates["down"] = true;
+
+			this.onUpdate();
+		},
+
+		do_upButton: function () {
+			var currentEffort = Math.min(1, this.options.rider.getEffort() + .005);
+			this.options.rider.setEffort(currentEffort);
+		},
+
+		do_downButton: function () {
+			var currentEffort = Math.max(0, this.options.rider.getEffort() - .005);
+			if (currentEffort <= MIN_EFFORT) currentEffort = MIN_EFFORT;
+			this.options.rider.setEffort(currentEffort);
+		},
+
+		onFieldSelectRider: function (rider) {
+			var group = undefined;
+			if (rider.isInGroup()) {
+				group = rider.getGroup();
+				group.addRider(this.options.rider);
+			} else {
+				group = this.options.raceManager.makeGroup({ members: [rider, this.options.rider] });
+			}
+		},
+
+		onClickCycle: function () {
+			if (this.options.rider.isInGroup()) {
+				var cycling = this.options.rider.isCooperating();
+				this.options.rider.setCooperating(!cycling);
+			}
 		}
 	});
 

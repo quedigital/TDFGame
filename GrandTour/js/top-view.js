@@ -13,7 +13,9 @@ define(["./view", "easeljs", "jquery"], function (View) {
 			this.zoom = options.zoom != undefined ? options.zoom : 10;
 			this.focus = options.focus != undefined ? options.focus : {};
 
-			this.canvas.click($.proxy(this.onClickTopView, this));
+			this.raceTime = $("<p>", { class: "race-time", text: "00:00:00" } );
+			this.raceTime.click($.proxy(this.onClickTime, this));
+			this.container.append(this.raceTime);
 		}
 
 		TopView.prototype = Object.create(View.prototype);
@@ -23,7 +25,7 @@ define(["./view", "easeljs", "jquery"], function (View) {
 				return "Top View";
 			},
 
-			onClickTopView: function () {
+			onClickTime: function () {
 				View.prototype.onClickView.call(this);
 			},
 
@@ -76,8 +78,13 @@ define(["./view", "easeljs", "jquery"], function (View) {
 
 					me.stage.addChild(container);
 
+					container.cursor = "pointer";
+					container.on("click", $.proxy(me.onClickRider, me, rider));
+
 					me.riderStats.push({ graphic: container, color: c, rider: rider, fuelText: fuel, label: text, powerText: power, line4: line4 });
 				});
+
+				this.stage.enableMouseOver();
 			},
 
 			step: function (rm) {
@@ -106,7 +113,7 @@ define(["./view", "easeljs", "jquery"], function (View) {
 					var x = (rider.getDistance() - center_distance) * ratio + (WIDTH * .5);
 
 					riderGraphic.x = x;
-					riderGraphic.y = rider.y ? 150 + rider.y : 100 + index * 55;
+					riderGraphic.y = rider.y ? 50 + rider.y : 75 + index * 55;
 
 					var nick = rider.options.name.substr(0, 1).toUpperCase();
 					me.riderStats[index].label.text = rider.isGroupLeader() ? nick + "*" : nick;
@@ -124,6 +131,8 @@ define(["./view", "easeljs", "jquery"], function (View) {
 				});
 
 				this.stage.update();
+
+				this.container.find(".race-time").text(rm.getTimeElapsedAsString());
 			},
 
 			getColorForRider: function (rider) {
@@ -140,6 +149,10 @@ define(["./view", "easeljs", "jquery"], function (View) {
 
 			setZoom: function (zoom) {
 				this.zoom = zoom;
+			},
+
+			onClickRider: function (rider, event) {
+				this.container.trigger("rider-select", rider);
 			}
 		});
 

@@ -41,6 +41,16 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 			}
 		},
 
+		escapeRider: function (rider) {
+			this.peloton.dropRider(rider);
+
+			// if there's only one rider left in the peloton, drop him too
+			if (this.peloton.getSize() == 1) {
+				var rider = this.peloton.getRiders()[0];
+				rider.setGroup(undefined);
+			}
+		},
+
 		getRiders: function () {
 			return this.riders;
 		},
@@ -176,6 +186,10 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 
 		getTimeElapsed: function () {
 			return this.time;
+		},
+
+		getTimeElapsedAsString: function () {
+			return String(this.getTimeElapsed()).toHHMMSS();
 		},
 
 		runToFinish: function (opts) {
@@ -444,6 +458,12 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 
 		getPelotonRidersInOrder: function () {
 			return this.peloton.getRidersInOrder();
+		},
+
+		showStats: function () {
+			for (var i = 0; i < this.riders.length; i++) {
+				this.riders[i].showStats();
+			}
 		}
 	};
 

@@ -82,7 +82,7 @@ describe("UI Test", function () {
 
 	describe("Power control", function () {
 		before(function () {
-			var rm = new RaceManager({interval: 1, delay: 10});
+			var rm = new RaceManager({interval: 1, delay: 100});
 			var flat_course = new Map({gradients: [[0, 0], [15, 0]]}); // 15 km flat
 
 			rm.setMap(flat_course);
@@ -92,11 +92,16 @@ describe("UI Test", function () {
 			rm.addRider(this.tt);
 			rm.addRider(this.sprinter);
 
+			rm.escapeRider(this.sprinter);
+
+			this.tt.setEffort({ power: 300 });
+			this.sprinter.setEffort({ power: 320 });
+
 			this.rm = rm;
 
 			this.ri = new RaceInterface({
 				raceManager: this.rm,
-				focus: this.tt
+				focus: this.sprinter
 			});
 		});
 

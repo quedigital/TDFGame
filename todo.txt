@@ -1,7 +1,11 @@
-// TODO: animate power handle
-// TODO: if power curve handle is too long and far away, it snaps, requiring a new mouse down
-// TODO: UI for "attack", "join group", "protect rider", "sprint", "sprint joystick", "[fun] power setting", and "cooperate/hang back", "move up/down in peloton"
+// TODO: don't vary x when no one is cycling in a group
+// TODO: finish window with results
+// TODO: wire up controller; add other basic buttons; show current race time
+// TODO: going below base power recuperates faster?
+// TODO: UI to indicate current power (lights along side of curve)
+// TODO: UI for "attack (up arrow in group)", "join group (click on rider in group)", "protect rider (maybe?)", "sprint", "sprint joystick", "[fun] power setting", and "cooperate/hang back", "move up/down in peloton"
 // TODO: how to move up in the peloton to control its speed?
+// TODO: also, how to move up to set up an attack
 // TODO: test to see what happens when riders can't get onto the paceline
 // TODO: use physics to determine rider side-to-side positioning [p2.js or custom collision code for x-axis only]
 // TODO: Group leader-of-the-moment can set the group's tempo
@@ -27,6 +31,9 @@
 // TODO: cleanup (ie, garbage collect) views and easel.js trappings? (not a priority)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// NOTE: Fun Atari 2600 pixelator: http://superpixeltime.johnnylml.com/
+// NOTE: Physics 2D constraints: http://www.turbulenz.biz/samples#sample-modal/samplepage/sample_assets/physics2d_constraints.canvas.release.html/samplesrc/sample_assets/physics2d_constraints.js.html
 
 IDEAS:
 
@@ -118,3 +125,5 @@ rolling course
 // DONE: use a longer, invisible power curve for the "adjusted" power curve
 // DONE: make power handle react according to where in relation to the dot it's clicked
 // DONE: draw glow dot at point of touch for power handle
+// DONE: animate power handle
+// DONE: if power curve handle is too long and far away, it snaps, requiring a new mouse down

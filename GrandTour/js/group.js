@@ -20,6 +20,12 @@ define([], function () {
 		if (this.options.timeInFront === undefined)
 			this.options.timeInFront = 10;
 
+		if (this.options.effort == undefined) {
+			if (this.options.members.length) {
+				this.options.effort = { power: this.options.members[0].getCurrentPower() };
+			}
+		}
+
 		this.reset();
 	}
 
@@ -241,6 +247,8 @@ define([], function () {
 			if (index != -1) {
 				this.options.members.splice(index, 1);
 				rider.setGroup(undefined);
+
+				// if there's only one rider left, the group will be disbanded by the racemanager
 			}
 		},
 
@@ -397,6 +405,10 @@ define([], function () {
 			$.each(this.options.members, function (index, rider) {
 				rider.clearExtraStats();
 			});
+		},
+
+		getRiders: function () {
+			return this.options.members;
 		},
 
 		getRidersInOrder: function () {

@@ -3,6 +3,8 @@ define(function () {
 			this.container = options.container;
 			this.disabled = options.disabled;
 
+			this.options = $.extend({}, options);
+
 			if (this.container)
 				this.container.empty();
 		}

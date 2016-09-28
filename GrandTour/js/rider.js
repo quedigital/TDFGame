@@ -655,6 +655,14 @@ define(["d3"], function (d3) {
 			return this.cooperating;
 		},
 
+		getOrderInGroup: function () {
+			return this.orderInGroup;
+		},
+
+		setOrderInGroup: function (order) {
+			this.orderInGroup = order;
+		},
+
 		createPowerLookup: function () {
 			// gradient is multiplied by 100 (ie, .12 => 12)
 			for (var g = -30; g <= 30; g += 1) {

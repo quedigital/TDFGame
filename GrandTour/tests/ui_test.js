@@ -5,6 +5,7 @@ requirejs.config({
 		"underscore": "../libs/underscore-min",
 		"d3": "../libs/d3.min",
 		"easeljs": "../libs/easeljs-0.8.2.min",
+		"preloadjs": "../libs/preloadjs-0.6.2.min",
 		"interact": "../libs/interact.min",
 		"raphael": "../libs/raphael.min"
 	},
@@ -13,6 +14,9 @@ requirejs.config({
 			exports: "$"
 		},
 		"easeljs": {
+			exports: "createjs"
+		},
+		"preloadjs": {
 			exports: "createjs"
 		}
 	}
@@ -92,10 +96,10 @@ describe("UI Test", function () {
 			rm.addRider(this.tt);
 			rm.addRider(this.sprinter);
 
-			rm.escapeRider(this.sprinter);
+			//rm.escapeRider(this.sprinter);
 
-			this.tt.setEffort({ power: 300 });
-			this.sprinter.setEffort({ power: 320 });
+			//this.tt.setEffort({ power: 300 });
+			//this.sprinter.setEffort({ power: 320 });
 
 			this.rm = rm;
 

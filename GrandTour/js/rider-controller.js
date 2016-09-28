@@ -182,7 +182,6 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 			this.riderStatus.remove();
 			this.upButton.remove();
 			this.downButton.remove();
-			this.cycleButton.remove();
 
 			this.paper.setSize(w, h);
 
@@ -233,9 +232,6 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 
 			this.downButton = this.paper.image("images/down-button.png", 360, 370, 100, 51);
 			this.downButton.mousedown($.proxy(this.onClickDown, this));
-
-			this.cycleButton = this.paper.image("images/cycle-button.png", 200, 380, 50, 50);
-			this.cycleButton.mousedown($.proxy(this.onClickCycle, this));
 		},
 
 		drawEnergyPathTo: function (x, y) {
@@ -385,18 +381,6 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 			//var watts = this.options.rider.getCurrentPower();
 			var watts = this.options.rider.getPowerFromEffort(this.options.rider.getEffort());
 			this.powerDisplay.text(Math.floor(watts));
-
-			if (this.options.rider.isInGroup()) {
-				this.cycleButton.attr("opacity", 1);
-				var cycling = this.options.rider.isCooperating();
-				if (cycling) {
-					this.cycleButton.attr("src", "images/cycle-button.png");
-				} else {
-					this.cycleButton.attr("src", "images/cycle-button-off.png");
-				}
-			} else {
-				this.cycleButton.attr("opacity", .5);
-			}
 		},
 
 		onMouseUp: function (event) {
@@ -451,14 +435,31 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 		},
 
 		do_upButton: function () {
-			var currentEffort = Math.min(1, this.options.rider.getEffort() + .005);
-			this.options.rider.setEffort(currentEffort);
+			if (this.options.rider.isInGroup()) {
+				// in a group, up/down can adjust your position or alter the tempo of the group...
+				//this.options.rider.setOrderInGroup(this.options.rider.getOrderInGroup() + 1);
+				if (this.options.rider.isGroupLeader()) {
+					var power = this.options.rider.getGroup().getPowerSetting();
+					this.options.rider.getGroup().setEffort({power: power + 50});
+				}
+			} else {
+				var currentEffort = Math.min(1, this.options.rider.getEffort() + .005);
+				this.options.rider.setEffort(currentEffort);
+			}
 		},
 
 		do_downButton: function () {
-			var currentEffort = Math.max(0, this.options.rider.getEffort() - .005);
-			if (currentEffort <= MIN_EFFORT) currentEffort = MIN_EFFORT;
-			this.options.rider.setEffort(currentEffort);
+			if (this.options.rider.isInGroup()) {
+				//this.options.rider.setOrderInGroup(this.options.rider.getOrderInGroup() - 1);
+				if (this.options.rider.isGroupLeader()) {
+					var power = this.options.rider.getGroup().getPowerSetting();
+					this.options.rider.getGroup().setEffort({power: power - 50});
+				}
+			} else {
+				var currentEffort = Math.max(0, this.options.rider.getEffort() - .005);
+				if (currentEffort <= MIN_EFFORT) currentEffort = MIN_EFFORT;
+				this.options.rider.setEffort(currentEffort);
+			}
 		},
 
 		onFieldSelectRider: function (rider) {
@@ -468,13 +469,6 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 				group.addRider(this.options.rider);
 			} else {
 				group = this.options.raceManager.makeGroup({ members: [rider, this.options.rider] });
-			}
-		},
-
-		onClickCycle: function () {
-			if (this.options.rider.isInGroup()) {
-				var cycling = this.options.rider.isCooperating();
-				this.options.rider.setCooperating(!cycling);
 			}
 		}
 	});

@@ -23,10 +23,11 @@ define(["top-view", "rider-controller", "team-controller"], function (TopView, R
 			container: raceview,
 			focus: {rider: this.options.focus},
 			zoom: 200,
-			disabled: false
+			disabled: false,
+			raceManager: this.options.raceManager
 		});
 
-		this.tv = tv;
+		this.topView = tv;
 
 		this.options.raceManager.addView(tv);
 
@@ -35,7 +36,7 @@ define(["top-view", "rider-controller", "team-controller"], function (TopView, R
 
 		$(window).resize($.proxy(this.resize, this));
 
-		raceview.on("rider-select", $.proxy(this.onRiderSelect, this));
+		//raceview.on("rider-select", $.proxy(this.onRiderSelect, this));
 
 		this.resize();
 	}
@@ -53,6 +54,7 @@ define(["top-view", "rider-controller", "team-controller"], function (TopView, R
 			this.controllerDOM.height("65%").width("100%");
 			this.teamDOM.height("10%").width("100%");
 
+			this.topView.resize();
 			this.riderControl.resize();
 		},
 

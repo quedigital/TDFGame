@@ -106,7 +106,7 @@ define([], function () {
 
 			for (var i = 0; i < this.options.members.length; i++) {
 				var rider = this.options.members[i];
-				if (rider.isCooperating()) {
+				if (rider.isCooperating() && cooperating > 1) {
 					if (!rider.isFinished()) {
 						d = rider.getDistance();
 						distanceToFinish = thisMapDistance - d;
@@ -126,6 +126,7 @@ define([], function () {
 				} else {
 					if (!rider.isFinished()) {
 						var desiredPos = frontPos - ((cooperating + noncoop) * .003);
+						var desiredPos = frontPos - ((cooperating - rider.getOrderInGroup()) * .003);
 						noncoop++;
 
 						rider.y = -25;

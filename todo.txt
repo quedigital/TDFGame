@@ -1,4 +1,9 @@
-// TODO: don't vary x when no one is cycling in a group
+// TODO: refactor orderInGroup so that it can be adjusted by riders on the fly
+// TODO: slow down game speed when approaching finish? (or make speed a setting any player can change?)
+// TODO: re-think speed/effort when riders join/leave groups
+// TODO: an out-of-gas cooperating rider can slow a group down (and they shouldn't)
+// TODO: topview: riders on your team show power bars
+// TODO: up/down buttons have "active" state
 // TODO: finish window with results
 // TODO: wire up controller; add other basic buttons; show current race time
 // TODO: going below base power recuperates faster?
@@ -127,3 +132,6 @@ rolling course
 // DONE: draw glow dot at point of touch for power handle
 // DONE: animate power handle
 // DONE: if power curve handle is too long and far away, it snaps, requiring a new mouse down
+// DONE: don't vary x when no one is cycling in a group
+// DONE: group lasso button (in top view) for joining group
+// DONE: move "cooperate" button to top-view? [as sprite from spritesheet]

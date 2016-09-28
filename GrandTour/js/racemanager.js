@@ -124,9 +124,15 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 				}
 			}
 
-			for (i = 0; i < this.groups.length; i++) {
+			i = 0;
+			while (i < this.groups.length) {
 				var group = this.groups[i];
-				group.endStep();
+				if (group.getSize() == 1) {
+					this.disbandGroup(group);
+				} else {
+					group.endStep();
+					i++;
+				}
 			}
 
 			if (this.hasActiveViews()) {
@@ -319,6 +325,22 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 			this.groups.push(g);
 
 			return g;
+		},
+
+		joinWithRider: function (rider1, rider2) {
+			if (rider1.isInGroup()) {
+				rider1.getGroup().dropRider(rider1);
+			}
+
+			if (rider2.isInGroup()) {
+				this.addToGroup(rider1, rider2.getGroup());
+			} else {
+				this.makeGroup( { members: [rider1, rider2] } );
+			}
+		},
+
+		addToGroup: function (rider, group) {
+			group.addRider(rider);
 		},
 
 		dropFromGroup: function (rider) {

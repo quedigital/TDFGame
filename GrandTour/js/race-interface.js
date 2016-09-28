@@ -1,4 +1,4 @@
-define(["top-view", "rider-controller", "team-controller"], function (TopView, RiderController, TeamController) {
+define(["top-view", "rider-controller", "team-controller", "standings-view"], function (TopView, RiderController, TeamController, StandingsView) {
 	function RaceInterface(options) {
 		this.options = options != undefined ? options : {};
 
@@ -11,6 +11,8 @@ define(["top-view", "rider-controller", "team-controller"], function (TopView, R
 		fullscreen.append(controller);
 		var team1 = $("<div>", { id: "team1" } );
 		fullscreen.append(team1);
+		var standings = $("<div>", { id: "overall-standings" } );
+		fullscreen.append(standings);
 
 		$("body").prepend(fullscreen);
 
@@ -27,9 +29,15 @@ define(["top-view", "rider-controller", "team-controller"], function (TopView, R
 			raceManager: this.options.raceManager
 		});
 
+		var live_standings = new StandingsView({
+			container: standings,
+			raceManager: this.options.raceManager
+		});
+
 		this.topView = tv;
 
 		this.options.raceManager.addView(tv);
+		this.options.raceManager.addView(live_standings);
 
 		this.riderControl = new RiderController({ raceManager: this.options.raceManager, container: "#focus-rider", rider: this.options.focus });
 		this.team = new TeamController({ container: "#team1"});

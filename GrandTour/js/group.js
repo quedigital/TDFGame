@@ -176,8 +176,9 @@ define([], function () {
 			}
 
 			// don't work too hard!
+			// NOTE: This was preventing slower riders from keeping up with a group, even when they had the energy
 			if (this.options.effort && this.options.effort.power && power > this.options.effort.power) {
-				power = this.options.effort.power;
+				//power = this.options.effort.power;
 			}
 
 			rider.setEffort({ power: power });

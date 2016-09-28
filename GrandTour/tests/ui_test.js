@@ -95,11 +95,13 @@ describe("UI Test", function () {
 
 			rm.addRider(this.tt);
 			rm.addRider(this.sprinter);
+			rm.addRider(this.climber);
 
 			//rm.escapeRider(this.sprinter);
 
-			//this.tt.setEffort({ power: 300 });
+			//this.tt.setEffort({ power: 200 });
 			//this.sprinter.setEffort({ power: 320 });
+			rm.getPeloton().setEffort({power: 300});
 
 			this.rm = rm;
 

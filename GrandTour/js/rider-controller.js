@@ -229,9 +229,11 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 
 			this.upButton = this.paper.image("images/up-button.png", 360, 10, 100, 51);
 			this.upButton.mousedown($.proxy(this.onClickUp, this));
+			this.upButton.click(this.do_upClick, this);
 
 			this.downButton = this.paper.image("images/down-button.png", 360, 370, 100, 51);
 			this.downButton.mousedown($.proxy(this.onClickDown, this));
+			this.downButton.click(this.do_downClick, this);
 		},
 
 		drawEnergyPathTo: function (x, y) {
@@ -436,12 +438,12 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 
 		do_upButton: function () {
 			if (this.options.rider.isInGroup()) {
-				// in a group, up/down can adjust your position or alter the tempo of the group...
-				//this.options.rider.setOrderInGroup(this.options.rider.getOrderInGroup() + 1);
+				/*
 				if (this.options.rider.isGroupLeader()) {
 					var power = this.options.rider.getGroup().getPowerSetting();
 					this.options.rider.getGroup().setEffort({power: power + 50});
 				}
+				*/
 			} else {
 				var currentEffort = Math.min(1, this.options.rider.getEffort() + .005);
 				this.options.rider.setEffort(currentEffort);
@@ -450,15 +452,28 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 
 		do_downButton: function () {
 			if (this.options.rider.isInGroup()) {
-				//this.options.rider.setOrderInGroup(this.options.rider.getOrderInGroup() - 1);
+				/*
 				if (this.options.rider.isGroupLeader()) {
 					var power = this.options.rider.getGroup().getPowerSetting();
 					this.options.rider.getGroup().setEffort({power: power - 50});
 				}
+				*/
 			} else {
 				var currentEffort = Math.max(0, this.options.rider.getEffort() - .005);
 				if (currentEffort <= MIN_EFFORT) currentEffort = MIN_EFFORT;
 				this.options.rider.setEffort(currentEffort);
+			}
+		},
+
+		do_upClick: function () {
+			if (this.options.rider.isInGroup()) {
+				this.options.rider.setOrderInGroup(this.options.rider.getOrderInGroup() - 1);
+			}
+		},
+
+		do_downClick: function () {
+			if (this.options.rider.isInGroup()) {
+				this.options.rider.setOrderInGroup(this.options.rider.getOrderInGroup() + 1);
 			}
 		},
 

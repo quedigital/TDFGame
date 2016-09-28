@@ -168,8 +168,8 @@ define(["./view", "easeljs", "preloadjs", "jquery"], function (View) {
 					//me.riderStats[index].powerText.text = Math.round(rider.getCurrentSpeedInKMH()) + "km/h";
 					//me.riderStats[index].fuelText.text = "desired: " + rider.extra;
 					//me.riderStats[index].powerText.text = Math.round(rider.getCurrentPower()) + "W";
-					//me.riderStats[index].powerText.text = rider.orderInGroup + " @ " + Math.round(rider.getCurrentPower()) + "W";;
-					me.riderStats[index].powerText.text = rider.currentGradient;
+					me.riderStats[index].powerText.text = rider.orderInGroup;
+					//me.riderStats[index].powerText.text = rider.currentGradient;
 					//me.riderStats[index].powerText.text = "actual: " + Math.round(rider.getDistance() * 1000);
 
 					//me.riderStats[index].line4.text = rider.orderInGroup + " @ " + Math.round(rider.getCurrentPower()) + "W";

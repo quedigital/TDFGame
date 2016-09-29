@@ -8,8 +8,10 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 
 		this.started = false;
 		this.running = false;
+		this.finished = false;
 
 		this.riders = [];
+		this.teams = [];
 		this.time = 0;
 
 		this.peloton = new Peloton();
@@ -30,6 +32,16 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 			this.riders.push(rider);
 
 			this.peloton.addRider(rider);
+		},
+
+		addTeam: function (team) {
+			this.teams.push(team);
+
+			var riders = team.getRiders();
+
+			for (var i = 0; i < riders.length; i++) {
+				this.addRider(riders[i]);
+			}
 		},
 
 		removeRider: function (rider) {
@@ -73,11 +85,14 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 
 		stop: function () {
 			this.running = false;
+
+			this.updateViews();
 		},
 
 		reset: function () {
 			this.time = 0;
 			this.running = false;
+			this.finished = false;
 
 			_.each(this.riders, function (rider, index) {
 				rider.reset();
@@ -140,6 +155,7 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 			}
 
 			if (allFinished) {
+				this.finished = true;
 				this.stop();
 			}
 
@@ -486,6 +502,10 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 			for (var i = 0; i < this.riders.length; i++) {
 				this.riders[i].showStats();
 			}
+		},
+
+		isFinished: function () {
+			return this.finished;
 		}
 	};
 

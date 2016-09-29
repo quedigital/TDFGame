@@ -117,9 +117,6 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 
 		this.knobActive = false;
 
-		this.powerDisplay = $("<p>", { class: "power-display", text: "1400" });
-		this.container.append(this.powerDisplay);
-
 		/*
 		this.canvas = $("<canvas width=" + w + " height = " + h + ">");
 		this.container.append(this.canvas);
@@ -137,6 +134,9 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 
 		this.stage.update();
 		*/
+
+		var riderName = $("<span>", { class: "rider-name", text: this.options.rider.options.name });
+		this.container.append(riderName);
 
 		// use Raphael for svg
 		this.paper = Raphael(this.container[0], w, h);
@@ -192,6 +192,12 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 			this.setPowerKnobTo(.5);
 		},
 
+		setRider: function (rider) {
+			this.options.rider = rider;
+
+			this.container.find(".rider-name").text(this.options.rider.options.name);
+		},
+
 		drawPowerController: function () {
 			var h = this.height, w = this.width;
 
@@ -217,8 +223,10 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 			this.powerDot.attr({ fill: "yellow", stroke: "none" });
 			this.powerDot.hide();
 
+			this.powerText = this.paper.text(0, 0, "400").attr({ fill: "pink ", "text-anchor": "middle", "font-size": 12, "pointer-events": "none" });
+
 			this.powerKnob = this.paper.set();
-			this.powerKnob.push(this.knob, this.powerDot);
+			this.powerKnob.push(this.knob, this.powerDot, this.powerText);
 
 			this.arrow = this.paper.image("images/arrow.png", 10, 10, 197, 150);
 			this.arrow.attr( { opacity: .5 } );
@@ -313,6 +321,7 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 
 			var pt = this.powerCurve.getPointAtLength(this.powerCurveLength * percent);
 			this.powerKnob.attr({ cx: pt.x, cy: pt. y });
+			this.powerText.transform("t" + pt.x + "," + pt.y);
 
 			this.currentSetting = percent;
 		},
@@ -382,7 +391,7 @@ define(["interact", "raphael", "d3", "easeljs", "jquery"], function (interact, R
 		updateStats: function () {
 			//var watts = this.options.rider.getCurrentPower();
 			var watts = this.options.rider.getPowerFromEffort(this.options.rider.getEffort());
-			this.powerDisplay.text(Math.floor(watts));
+			this.powerText.attr({ text: Math.floor(watts)});
 		},
 
 		onMouseUp: function (event) {

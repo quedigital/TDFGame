@@ -22,7 +22,8 @@ requirejs.config({
 	}
 });
 
-var RaceManager, Rider, Map;
+var RaceManager, Rider, Map, Team;
+
 // 2s, 5s, 60s, 5min, 20min, 45min, 3hrs
 // default powercurve = [1600, 1440, 690, 456, 384, 320, 300]
 
@@ -69,13 +70,14 @@ function makeBasicRiders (obj) {
 }
 
 before(function (done) {
-	requirejs(["racemanager", "rider", "map", "jquery", "top-view", "rider-controller", "race-interface"], function (RaceManager_class, Rider_class, Map_class, $, TopView_class, RiderController_class, RaceInterface_class) {
+	requirejs(["racemanager", "rider", "map", "jquery", "top-view", "rider-controller", "race-interface", "team"], function (RaceManager_class, Rider_class, Map_class, $, TopView_class, RiderController_class, RaceInterface_class, Team_class) {
 		RaceManager = RaceManager_class;
 		Rider = Rider_class;
 		Map = Map_class;
 		TopView = TopView_class;
 		RiderController = RiderController_class;
 		RaceInterface = RaceInterface_class;
+		Team = Team_class;
 
 		done();
 	});
@@ -91,11 +93,21 @@ describe("UI Test", function () {
 
 			rm.setMap(flat_course);
 
+			this.roster1 = {};
+
 			makeBasicRiders(this);
+			makeBasicRiders(this.roster1);
 
 			rm.addRider(this.tt);
 			rm.addRider(this.sprinter);
 			rm.addRider(this.climber);
+
+			this.team1 = new Team({
+				name: "Thirsty-Kombucha",
+				riders: [this.roster1.tt, this.roster1.sprinter, this.roster1.climber]
+			});
+
+			rm.addTeam(this.team1);
 
 			//rm.escapeRider(this.sprinter);
 
@@ -107,7 +119,7 @@ describe("UI Test", function () {
 
 			this.ri = new RaceInterface({
 				raceManager: this.rm,
-				focus: this.sprinter
+				team: this.team1
 			});
 		});
 

@@ -1,10 +1,11 @@
-// TODO: show time gaps in standings view
+// TODO: topview: riders on your team show power bars
 // TODO: leader of peloton can control its speed
-// TODO: refactor orderInGroup so that it can be adjusted by riders on the fly [NOTE: manually moving to front of group should mean you are the leader and not drafting]
-// TODO: slow down game speed when approaching finish? (or make speed a setting any player can change?)
 // TODO: re-think speed/effort when riders join/leave groups
 // TODO: an out-of-gas cooperating rider can slow a group down (and they shouldn't)
-// TODO: topview: riders on your team show power bars
+// TODO: UI for "time in front" when cycling; [group's "time in front" might need to be hard-coded?]
+// TODO: AI opponents?
+// TODO: slow down game speed when approaching finish? (or make speed a setting any player can change?) [or slow down during "sprints"]
+// TODO: peloton spreads out to fill road
 // TODO: up/down buttons have "active" state
 // TODO: wire up controller; add other basic buttons; show current race time
 // TODO: going below base power recuperates faster?
@@ -137,3 +138,9 @@ rolling course
 // DONE: group lasso button (in top view) for joining group
 // DONE: move "cooperate" button to top-view? [as sprite from spritesheet]
 // DONE: finish window with results [standings view]
+// DONE: refactor orderInGroup so that it can be adjusted by riders on the fly [for non-coop riders] [NOTE: manually moving to front of group should mean you are the leader and not drafting]
+// DONE: show time gaps in standings view
+// DONE: change topview to center on team's selected rider too
+// DONE: show rider name on Rider Controller
+// DONE: switching to other riders with RiderController
+// DONE: riders on teams

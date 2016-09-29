@@ -21,9 +21,11 @@ define(["top-view", "rider-controller", "team-controller", "standings-view"], fu
 		this.controllerDOM = controller;
 		this.teamDOM = team1;
 
+		var default_rider = this.options.team.getRiders()[0];
+
 		var tv = new TopView({
 			container: raceview,
-			focus: {rider: this.options.focus},
+			focus: {rider: default_rider},
 			zoom: 200,
 			disabled: false,
 			raceManager: this.options.raceManager
@@ -39,8 +41,9 @@ define(["top-view", "rider-controller", "team-controller", "standings-view"], fu
 		this.options.raceManager.addView(tv);
 		this.options.raceManager.addView(live_standings);
 
-		this.riderControl = new RiderController({ raceManager: this.options.raceManager, container: "#focus-rider", rider: this.options.focus });
-		this.team = new TeamController({ container: "#team1"});
+		this.riderControl = new RiderController({ raceManager: this.options.raceManager, container: "#focus-rider", rider: default_rider });
+		this.team = new TeamController({ container: this.teamDOM, team: this.options.team });
+		this.teamDOM.on("select-rider", $.proxy(this.onSelectRiderOnTeam, this));
 
 		$(window).resize($.proxy(this.resize, this));
 
@@ -68,6 +71,11 @@ define(["top-view", "rider-controller", "team-controller", "standings-view"], fu
 
 		onRiderSelect: function (event, rider) {
 			this.riderControl.onFieldSelectRider(rider);
+		},
+
+		onSelectRiderOnTeam: function (event, rider) {
+			this.riderControl.setRider(rider);
+			this.topView.setFocus({ rider: rider });
 		}
 	};
 

@@ -210,7 +210,7 @@ define(["d3"], function (d3) {
 			this.options.redzonePenalty = true;
 		}
 
-		this.effort = this.options.effort ? this.options.effort : 1;
+		this.effort = this.options.effort ? this.options.effort : .5;
 
 		this.reset();
 	}

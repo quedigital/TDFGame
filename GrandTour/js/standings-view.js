@@ -37,6 +37,8 @@ define(["./view", "jquery"], function (View) {
 			}
 
 			this.container.append(t);
+
+			this.initializedCallback();
 		},
 
 		step: function (rm) {
@@ -70,7 +72,7 @@ define(["./view", "jquery"], function (View) {
 				var tr = this.container.find("tr").eq(i);
 				var gap = this.rm.getTimeGapBetween(data[0].rider, data[i].rider);
 				if (gap == 0 || gap == lastGap) {
-					gapReadable = "\"";
+					gapReadable = "";
 				} else {
 					gapReadable = "+" + toMinutesAndSeconds(gap);
 				}
@@ -109,16 +111,16 @@ define(["./view", "jquery"], function (View) {
 		var mins = Math.floor(t / 60);
 		var secs = t - mins * 60;
 		if (mins > 0) {
-			s = mins + "m";
+			s = mins.toFixed(2) + "'";
 		}
 		if (secs > 0) {
 			if (mins > 0) {
 				s += " ";
 			}
 			if (secs != Math.floor(secs)) {
-				s += secs.toFixed(2) + "s";
+				s += secs.toFixed(2) + "\"";
 			} else {
-				s += secs + "s";
+				s += secs + "\"";
 			}
 		}
 

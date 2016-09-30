@@ -9,6 +9,8 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 		this.started = false;
 		this.running = false;
 		this.finished = false;
+		this.initialized = false;
+		this.allInitialized = false;
 
 		this.riders = [];
 		this.teams = [];
@@ -40,6 +42,7 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 			var riders = team.getRiders();
 
 			for (var i = 0; i < riders.length; i++) {
+				riders[i].setTeam(team);
 				this.addRider(riders[i]);
 			}
 		},
@@ -93,6 +96,13 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 			this.time = 0;
 			this.running = false;
 			this.finished = false;
+			this.started = false;
+			this.initialized = false;
+			this.allInitialized = false;
+
+			_.each(this.views, function (view, index) {
+				view.reset();
+			});
 
 			_.each(this.riders, function (rider, index) {
 				rider.reset();
@@ -102,10 +112,16 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 		doStep: function (options) {
 			if (this.paused) return;
 
-			if (!this.started) {
+			if (!this.initialized) {
 				this.initializeViews();
 
-				this.started = true;
+				this.initialized = true;
+
+				return;
+			}
+
+			if (!this.allInitialized) {
+				return;
 			}
 
 			var i;
@@ -457,6 +473,24 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 			});
 
 			return active.length > 0;
+		},
+
+		initializedCallback: function (view) {
+			var allInitialized = true;
+
+			for (var i = 0; i < this.views.length; i++) {
+				var v = this.views[i];
+				if (v == view) {
+					v.initialized = true;
+				} else if (!v.initialized) {
+					allInitialized = false;
+				}
+
+			}
+
+			if (allInitialized) {
+				this.allInitialized = true;
+			}
 		},
 
 		getLeaderColor: function () {

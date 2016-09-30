@@ -1,22 +1,22 @@
-// TODO: topview: riders on your team show power bars
 // TODO: leader of peloton can control its speed
+// TODO: Group leader-of-the-moment can set the group's tempo
+// TODO: team with most riders "pulling" in a group get to control it (ie, set its pace)
 // TODO: re-think speed/effort when riders join/leave groups
 // TODO: an out-of-gas cooperating rider can slow a group down (and they shouldn't)
+// TODO: drafting when not in group (just physically behind a bunch of riders)?
 // TODO: UI for "time in front" when cycling; [group's "time in front" might need to be hard-coded?]
+// TODO: to sprint you have to swipe really fast to control speed and your "line"
 // TODO: AI opponents?
 // TODO: slow down game speed when approaching finish? (or make speed a setting any player can change?) [or slow down during "sprints"]
-// TODO: peloton spreads out to fill road
+// TODO: peloton spreads out to fill road (with physics for spacing)
+// TODO: use physics to determine rider side-to-side positioning [p2.js or custom collision code for x-axis only]
 // TODO: up/down buttons have "active" state
-// TODO: wire up controller; add other basic buttons; show current race time
 // TODO: going below base power recuperates faster?
 // TODO: UI to indicate current power (lights along side of curve)
 // TODO: UI for "attack (up arrow in group)", "join group (click on rider in group)", "protect rider (maybe?)", "sprint", "sprint joystick", "[fun] power setting", and "cooperate/hang back", "move up/down in peloton"
 // TODO: how to move up in the peloton to control its speed?
 // TODO: also, how to move up to set up an attack
 // TODO: test to see what happens when riders can't get onto the paceline
-// TODO: use physics to determine rider side-to-side positioning [p2.js or custom collision code for x-axis only]
-// TODO: Group leader-of-the-moment can set the group's tempo
-// TODO: team with most riders "pulling" in a group get to control it (ie, set its pace)
 // TODO: in-game breakaway calculator
 // TODO: power is reduced, via easing function, when energy is below 20% (and player avatar starts sweating)
 // TODO: UI elements for: leading group distance to finish, gaps to other groups
@@ -144,3 +144,8 @@ rolling course
 // DONE: show rider name on Rider Controller
 // DONE: switching to other riders with RiderController
 // DONE: riders on teams
+// DONE: top-view zoom shouldn't change based on stage distance
+// DONE: topview: riders on your team show power bars
+// DONE: wire up controller; add other basic buttons; show current race time
+// DONE: topview: update background to suggest speed
+// DONE: topview: selection circle under current rider

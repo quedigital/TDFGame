@@ -19,6 +19,10 @@ define([], function () {
 
 		getNumRiders: function () {
 			return this.options.riders.length;
+		},
+
+		hasRider: function (rider) {
+			return this.options.riders.indexOf(rider) != -1;
 		}
 	};
 

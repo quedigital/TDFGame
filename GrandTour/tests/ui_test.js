@@ -89,7 +89,7 @@ describe("UI Test", function () {
 	describe("Power control", function () {
 		before(function () {
 			var rm = new RaceManager({interval: 1, delay: 100});
-			var flat_course = new Map({gradients: [[0, 0], [15, 0]]}); // 15 km flat
+			var flat_course = new Map({gradients: [[0, 0], [15.0, 0]]}); // 15 km flat
 
 			rm.setMap(flat_course);
 

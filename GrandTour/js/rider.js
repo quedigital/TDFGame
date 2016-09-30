@@ -238,6 +238,7 @@ define(["d3"], function (d3) {
 			this.options.recovery = this.options.powerCurve[this.options.powerCurve.length - 1];
 
 			this.group = undefined;
+			this.team = undefined;
 
 			this.clearExtraStats();
 
@@ -557,6 +558,10 @@ define(["d3"], function (d3) {
 			this.group = group;
 		},
 
+		setTeam: function (team) {
+			this.team = team;
+		},
+
 		getAverageSpeed: function () {
 			var avg = this.distance / (this.time / 3600);
 
@@ -726,6 +731,10 @@ define(["d3"], function (d3) {
 			var entry = Math.round((power - LOOKUP_STARTING_POWER) / 10);
 
 			return chart[entry];
+		},
+
+		isOnSameTeam: function (otherRider) {
+			return (this.team && this.team.hasRider(otherRider));
 		},
 
 		graphPowerCurve: function (dom, options) {

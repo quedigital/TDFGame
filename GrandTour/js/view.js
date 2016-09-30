@@ -2,11 +2,14 @@ define(function () {
 		function View (options) {
 			this.container = options.container;
 			this.disabled = options.disabled;
+			this.initialized = false;
 
 			this.options = $.extend({}, options);
 
 			if (this.container)
 				this.container.empty();
+
+			this.reset();
 		}
 
 		View.prototype = {
@@ -18,8 +21,16 @@ define(function () {
 				this.rm = rm;
 			},
 
+			initializedCallback: function () {
+				this.rm.initializedCallback(this);
+			},
+
 			step: function (rm) {
 				console.log("tick");
+			},
+
+			reset: function () {
+				this.initialized = false;
 			},
 
 			onClickView: function (event) {

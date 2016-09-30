@@ -6,8 +6,9 @@ define(["./view", "easeljs", "preloadjs", "jquery"], function (View) {
 			this.container.append(this.canvas);
 
 			this.stage = new createjs.Stage(this.canvas[0]);
+			this.stage.snapToPixelEnabled = true;
 
-			this.zoom = options.zoom != undefined ? options.zoom : 10;
+			this.zoom = options.zoom != undefined ? options.zoom : 200;
 			this.focus = options.focus != undefined ? options.focus : {};
 
 			this.raceTime = $("<p>", { class: "race-time", text: "00:00:00" } );
@@ -45,10 +46,13 @@ define(["./view", "easeljs", "preloadjs", "jquery"], function (View) {
 			this.backStage = s;
 
 			var queue = new createjs.LoadQueue();
-			queue.on("complete", this.resize, this);
+			queue.on("complete", this.createGraphics, this);
 
 			queue.loadFile("images/lasso-button.png");
 			queue.loadFile("images/leave-group-button.png");
+			queue.loadFile("images/topview-rider.png");
+			queue.loadFile("images/road.png");
+			queue.loadFile("images/selection-circle.png");
 
 			this.queue = queue;
 
@@ -75,14 +79,21 @@ define(["./view", "easeljs", "preloadjs", "jquery"], function (View) {
 
 			initialize: function (rm) {
 				View.prototype.initialize.call(this, rm);
+			},
 
-				var riders = rm.getRiders();
+			createGraphics: function () {
+				var riders = this.rm.getRiders();
 
 				this.riderStats = [];
 
 				var me = this;
 
+				var background = new createjs.Container();
+				this.background = background;
+				this.stage.addChild(this.background);
+
 				var colors = ["red", "green", "DeepSkyBlue"];
+				var bikeImage = this.queue.getResult("images/topview-rider.png");
 
 				_.each(riders, function (rider, index) {
 					var nick = rider.options.name.substr(0, 1).toUpperCase();
@@ -90,7 +101,35 @@ define(["./view", "easeljs", "preloadjs", "jquery"], function (View) {
 					var c = colors[index % colors.length];
 
 					var container = new createjs.Container();
+					container.snapToPixel = true;
 
+					var selection = new createjs.Bitmap("images/selection-circle.png");
+					selection.regX = 19;
+					selection.regY = 19;
+					container.addChild(selection);
+
+					var bike = new createjs.Bitmap("images/topview-rider.png");
+					bike.regX = 23;
+					bike.regY = 6;
+					container.addChild(bike);
+
+					var name = new createjs.Text(nick, "italic 9px Arial", "white");
+					name.textBaseline = "top";
+					name.textAlign = "center";
+					name.y = 6;
+					container.addChild(name);
+
+					var energy = new createjs.Shape();
+					energy.x = -6;
+					energy.y = 18;
+					me.drawEnergy(index, rider, energy);
+					container.addChild(energy);
+
+					if (!rider.isOnSameTeam(me.focus.rider)) {
+						energy.visible = false;
+					}
+
+					/*
 					var circle = new createjs.Shape();
 					circle.graphics.beginFill(c).drawCircle(0, 0, 10);
 					circle.x = 0;
@@ -119,16 +158,22 @@ define(["./view", "easeljs", "preloadjs", "jquery"], function (View) {
 					line4.textAlign = "center";
 					line4.y = 30;
 					container.addChild(line4);
+					*/
 
 					me.stage.addChild(container);
 
 					container.cursor = "pointer";
 					container.on("click", $.proxy(me.onClickRider, me, rider));
 
-					me.riderStats.push({ graphic: container, color: c, rider: rider, fuelText: fuel, label: text, powerText: power, line4: line4 });
+					//me.riderStats.push({ graphic: container, color: c, rider: rider, fuelText: fuel, label: text, powerText: power, line4: line4 });
+					me.riderStats.push({ graphic: container, color: c, rider: rider, bike: bike, name: name, energy: energy, selection: selection });
 				});
 
 				this.stage.enableMouseOver();
+
+				this.resize();
+
+				this.initializedCallback();
 			},
 
 			step: function (rm) {
@@ -137,11 +182,10 @@ define(["./view", "easeljs", "preloadjs", "jquery"], function (View) {
 				var me = this;
 
 				var WIDTH = this.container.width();
-				var STAGE_DISTANCE = rm.getStageDistance();
 
 				var center_distance = 0;
 
-				var ratio = (WIDTH / STAGE_DISTANCE) * this.zoom;
+				var ratio = this.zoom * 75;
 
 				if (this.focus) {
 					if (this.focus.group) {
@@ -155,12 +199,18 @@ define(["./view", "easeljs", "preloadjs", "jquery"], function (View) {
 
 				_.each(riders, function (rider, index) {
 					var riderGraphic = me.riderStats[index].graphic;
-					//var x = (rider.getDistance() - center_distance) / STAGE_DISTANCE * WIDTH * me.zoom;
 					var x = (rider.getDistance() - center_distance) * ratio + (WIDTH * .5);
 
 					riderGraphic.x = x;
-					riderGraphic.y = rider.y ? 50 + rider.y : 75 + index * 55;
+					riderGraphic.y = rider.y ? 75 + rider.y : 75 + index * 55;
 
+					me.riderStats[index].name.text = rider.options.name;
+
+					me.drawEnergy(index, rider, me.riderStats[index].energy);
+
+					me.riderStats[index].selection.visible = (rider == me.focus.rider);
+
+					/*
 					var nick = rider.options.name.substr(0, 1).toUpperCase();
 					me.riderStats[index].label.text = rider.isGroupLeader() ? nick + "*" : nick;
 					me.riderStats[index].fuelText.text = Math.round(rider.getFuelPercent()) + "%";
@@ -174,6 +224,7 @@ define(["./view", "easeljs", "preloadjs", "jquery"], function (View) {
 
 					//me.riderStats[index].line4.text = rider.orderInGroup + " @ " + Math.round(rider.getCurrentPower()) + "W";
 					me.riderStats[index].line4.text = Math.round(rider.getCurrentPower()) + "W";
+					*/
 				});
 
 				this.drawSelectedGroupOrRider();
@@ -181,6 +232,8 @@ define(["./view", "easeljs", "preloadjs", "jquery"], function (View) {
 				this.drawLasso();
 
 				this.updateButtons();
+
+				this.updateBackground();
 
 				this.stage.update();
 
@@ -221,6 +274,8 @@ define(["./view", "easeljs", "preloadjs", "jquery"], function (View) {
 				this.leaveGroupButton.y = h - this.leaveGroupButton.image.height;
 				this.cycleButton.x = this.leaveGroupButton.x + this.leaveGroupButton.image.width + 5;
 				this.cycleButton.y = h - this.lassoButton.image.height;
+
+				this.resizeBackground();
 			},
 
 			onClickLasso: function () {
@@ -355,6 +410,61 @@ define(["./view", "easeljs", "preloadjs", "jquery"], function (View) {
 				if (this.focus.rider.isInGroup()) {
 					var cycling = this.focus.rider.isCooperating();
 					this.focus.rider.setCooperating(!cycling);
+				}
+			},
+
+			drawEnergy: function (index, rider, shape) {
+				var numBars = Math.round(5 * rider.getFuelPercent() / 100);
+
+				if (this.riderStats.length > index && numBars != this.riderStats[index].numBars) {
+					// redraw
+					var colors = ["red", "orange", "yellow", "lightgreen", "green"];
+					var color = colors[numBars - 1];
+
+					shape.graphics.beginFill("black").drawRect(-1, -1, 16, 8);
+
+					for (var i = 0; i < numBars; i++) {
+						shape.graphics.beginFill(color).drawRect(i * 3, 0, 2, 6);
+					}
+
+					for (i = numBars; i < 5; i++) {
+						shape.graphics.beginFill("gray").drawRect(i * 3, 0, 2, 6);
+					}
+
+					this.riderStats[index].numBars = numBars;
+				}
+			},
+
+			resizeBackground: function () {
+				if (this.background) {
+					this.background.removeAllChildren();
+
+					var road = this.queue.getResult("images/road.png");
+
+					this.backgroundWidth = undefined;
+
+					for (var x = 0; x < this.container.width() * 2; x += road.width) {
+						var newRoad = new createjs.Bitmap("images/road.png");
+						newRoad.x = x;
+						this.background.addChild(newRoad);
+						if (this.backgroundWidth == undefined && x > this.container.width()) {
+							this.backgroundWidth = x;
+						}
+					}
+
+					this.stage.setChildIndex(this.background, 0);
+				}
+			},
+
+			updateBackground: function () {
+				var w = this.container.width();
+
+				var speed = this.focus.rider.getCurrentSpeedInKMH() * .5;
+
+				this.background.x -= speed;
+
+				if (this.background.x < -this.backgroundWidth) {
+					this.background.x += this.backgroundWidth;
 				}
 			}
 		});

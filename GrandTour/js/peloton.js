@@ -44,12 +44,13 @@ define(["jquery", "./group"], function ($, Group) {
 
 			leader.stats.pulls++;
 
-			for (var i = 0; i < this.options.members.length; i++) {
-				var rider = this.options.members[i];
+			// sort riders by distance
+			var ridersInOrder = this.options.members.sort(Rider.sortByDistance);
+
+			for (var i = 0; i < ridersInOrder.length; i++) {
+				var rider = ridersInOrder[i];
 				if (!rider.isFinished()) {
 					var desiredPos = frontPos + ((leaderOrder - rider.orderInGroup) * .003);
-
-					rider.y = -25;
 
 					rider.extra = Math.round(desiredPos * 1000);
 
@@ -60,6 +61,11 @@ define(["jquery", "./group"], function ($, Group) {
 					this.adjustPowerToReachPosition(rider, desiredPos, gradient);
 
 					rider.step(gradient, distanceToFinish);
+
+					rider.x = raceManager.findFreeRoadInRange(rider, d, rider.getDistance(), rider.x);
+					if (rider.x == undefined) {
+						console.log("blocked");
+					}
 
 					rider.stats.nondrafting += rider.isDrafting() ? 0 : 1;
 					rider.stats.drafting += rider.isDrafting() ? 1 : 0;

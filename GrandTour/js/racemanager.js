@@ -30,6 +30,10 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 	}
 
 	RaceManager.prototype = {
+		getFrameDelay: function () {
+			return this.frameDelay;
+		},
+
 		addRider: function (rider) {
 			this.riders.push(rider);
 
@@ -120,7 +124,7 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 				return;
 			}
 
-			if (!this.allInitialized) {
+			if (this.views.length > 0 && !this.allInitialized) {
 				return;
 			}
 
@@ -540,6 +544,51 @@ define(["underscore", "group", "peloton"], function (_, Group, Peloton) {
 
 		isFinished: function () {
 			return this.finished;
+		},
+
+		findFreeRoadInRange: function (rider, d1, d2, x) {
+			var ROAD_HALF_WIDTH = 5;
+
+			var blocked = [];
+
+			function isBlocked (newX) {
+				for (var j = 0; j < blocked.length; j++) {
+					if (blocked[j] == newX)
+						return true;
+				}
+				return false;
+			}
+
+			for (var i = 0; i < this.riders.length; i++) {
+				var r = this.riders[i];
+				if (r != rider && !r.isFinished()) {
+					var d = r.getDistance();
+					if (d >= d1 && d <= d2) {
+						// in range
+						blocked.push(this.riders[i].x);
+					}
+				}
+			}
+
+			var tryX, newX = undefined;
+
+			var startX = 0;
+
+			for (var xx = 0; xx < ROAD_HALF_WIDTH; xx += 1) {
+				var tryX = startX + xx;
+				if (isBlocked(tryX)) {
+					tryX = startX - xx;
+					if (!isBlocked(tryX)) {
+						newX = tryX;
+						break;
+					}
+				} else {
+					newX = tryX;
+					break;
+				}
+			}
+
+			return newX;
 		}
 	};
 

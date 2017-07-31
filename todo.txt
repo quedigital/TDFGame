@@ -1,7 +1,16 @@
-// TODO: leader of peloton can control its speed
-// TODO: Group leader-of-the-moment can set the group's tempo
-// TODO: team with most riders "pulling" in a group get to control it (ie, set its pace)
+// TODO: riders try to re-center on road?
+// TODO: is the peloton the only group that tries to bunch up? or groups above a certain size?
+// TODO: show km/h in rider controller
+// TODO: indicate group leader in topview
+// TODO: disable cycle button in peloton
+// TODO: disable join-group button if in group already
+// TODO: disable throttle when in pack (and not leading)?
+// TODO: renumber orderInGroup when people move around in a group
+// TODO: how to avoid the jerky speeds when effort is set high but energy is gone?
+// TODO: team with most riders "pulling" in a group get to control it (ie, set its pace) [or: riders have to work their way to the front, physics-wise]
 // TODO: re-think speed/effort when riders join/leave groups
+// TODO: use physics to determine rider side-to-side positioning [p2.js or custom collision code for x-axis only]
+// TODO: have a "camera system" for the top-view, with pan and zoom and easing
 // TODO: an out-of-gas cooperating rider can slow a group down (and they shouldn't)
 // TODO: drafting when not in group (just physically behind a bunch of riders)?
 // TODO: UI for "time in front" when cycling; [group's "time in front" might need to be hard-coded?]
@@ -9,7 +18,6 @@
 // TODO: AI opponents?
 // TODO: slow down game speed when approaching finish? (or make speed a setting any player can change?) [or slow down during "sprints"]
 // TODO: peloton spreads out to fill road (with physics for spacing)
-// TODO: use physics to determine rider side-to-side positioning [p2.js or custom collision code for x-axis only]
 // TODO: up/down buttons have "active" state
 // TODO: going below base power recuperates faster?
 // TODO: UI to indicate current power (lights along side of curve)
@@ -149,3 +157,7 @@ rolling course
 // DONE: wire up controller; add other basic buttons; show current race time
 // DONE: topview: update background to suggest speed
 // DONE: topview: selection circle under current rider
+// DONE: leader of peloton can control its speed
+// DONE: Group leader-of-the-moment can set the group's tempo
+// DONE: don't use fixed digits for # of minutes in standings view
+// DONE: animate topview elements (to smooth out the riders)

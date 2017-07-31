@@ -1,4 +1,4 @@
-define(["./view", "easeljs", "preloadjs", "jquery"], function (View) {
+define(["./view", "easeljs", "preloadjs", "tweenjs", "jquery"], function (View) {
 		function TopView (options) {
 			View.call(this, options);
 
@@ -200,9 +200,10 @@ define(["./view", "easeljs", "preloadjs", "jquery"], function (View) {
 				_.each(riders, function (rider, index) {
 					var riderGraphic = me.riderStats[index].graphic;
 					var x = (rider.getDistance() - center_distance) * ratio + (WIDTH * .5);
+					var y = 75 + (rider.x * .0015 * ratio);
 
-					riderGraphic.x = x;
-					riderGraphic.y = rider.y ? 75 + rider.y : 75 + index * 55;
+					var tween = createjs.Tween.get(riderGraphic)
+						.to({x: x, y: y}, rm.getFrameDelay());
 
 					me.riderStats[index].name.text = rider.options.name;
 

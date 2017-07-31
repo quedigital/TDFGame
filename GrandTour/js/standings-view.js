@@ -111,12 +111,9 @@ define(["./view", "jquery"], function (View) {
 		var mins = Math.floor(t / 60);
 		var secs = t - mins * 60;
 		if (mins > 0) {
-			s = mins.toFixed(2) + "'";
+			s = mins + "'";
 		}
 		if (secs > 0) {
-			if (mins > 0) {
-				s += " ";
-			}
 			if (secs != Math.floor(secs)) {
 				s += secs.toFixed(2) + "\"";
 			} else {

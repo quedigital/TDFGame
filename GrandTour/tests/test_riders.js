@@ -696,7 +696,6 @@ describe("Grand Tour", function () {
 
 			var gradient = .08;//0.08;
 
-			//*
 			var course = new Map({gradients: [
 				[0, 0],
 				[10, 0],
@@ -713,15 +712,12 @@ describe("Grand Tour", function () {
 				[5, -gradient],
 				[20, 0]
 			]});         // 95 km with 3 hills and a finishing straight
-			//*/
 
-			/*
-			 var course = new Map({ gradients: [
-			 [0,gradient],
-			 [50,gradient],
-			 [40,gradient]
-			 ]});
-			 //*/
+			 //var course = new Map({ gradients: [
+			 //[0,gradient],
+			 //[50,gradient],
+			 //[40,gradient]
+			 //]});
 
 			rm.setMap(course);
 
@@ -897,21 +893,22 @@ describe("Grand Tour", function () {
 		});
 	});
 
-		/*
-		it("Riders can get dropped from their groups", function () {
 
-		});
+	/*
+	it("Riders can get dropped from their groups", function () {
 
-		it("Downhill sections have difficulty ratings and hairpin-like sections", function () {
+	});
 
-		});
+	it("Downhill sections have difficulty ratings and hairpin-like sections", function () {
 
-		it("A group that's cooperating is faster than a group that's not", function () {
+	});
 
-		});
+	it("A group that's cooperating is faster than a group that's not", function () {
 
-		it("Breakaways are hard to get into", function () {
+	});
 
-		});
-		*/
+	it("Breakaways are hard to get into", function () {
+
+	});
+	*/
 });

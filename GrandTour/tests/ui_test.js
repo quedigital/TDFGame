@@ -6,6 +6,7 @@ requirejs.config({
 		"d3": "../libs/d3.min",
 		"easeljs": "../libs/easeljs-0.8.2.min",
 		"preloadjs": "../libs/preloadjs-0.6.2.min",
+		"tweenjs": "../libs/tweenjs-0.6.2.min",
 		"interact": "../libs/interact.min",
 		"raphael": "../libs/raphael.min"
 	},
@@ -17,6 +18,9 @@ requirejs.config({
 			exports: "createjs"
 		},
 		"preloadjs": {
+			exports: "createjs"
+		},
+		"tweenjs": {
 			exports: "createjs"
 		}
 	}
@@ -86,7 +90,7 @@ before(function (done) {
 describe("UI Test", function () {
 	this.timeout(60000);
 
-	describe("Power control", function () {
+	describe.only("Power control", function () {
 		before(function () {
 			var rm = new RaceManager({interval: 1, delay: 100});
 			var flat_course = new Map({gradients: [[0, 0], [15.0, 0]]}); // 15 km flat
@@ -98,9 +102,9 @@ describe("UI Test", function () {
 			makeBasicRiders(this);
 			makeBasicRiders(this.roster1);
 
-			rm.addRider(this.tt);
-			rm.addRider(this.sprinter);
-			rm.addRider(this.climber);
+			//rm.addRider(this.tt);
+			//rm.addRider(this.sprinter);
+			//rm.addRider(this.climber);
 
 			this.team1 = new Team({
 				name: "Thirsty-Kombucha",
@@ -123,7 +127,52 @@ describe("UI Test", function () {
 			});
 		});
 
-		it("Can control rider with power control", function (done) {
+		it("Can control rider with UI", function (done) {
+			this.rm.runToFinish({callback: done});
+		});
+	});
+
+	describe("Road positioning", function () {
+		before(function () {
+			var rm = new RaceManager({interval: 1, delay: 100});
+			var flat_course = new Map({gradients: [[0, 0], [15.0, 0]]}); // 15 km flat
+
+			rm.setMap(flat_course);
+
+			this.roster1 = {};
+
+			makeBasicRiders(this);
+			makeBasicRiders(this.roster1);
+
+			rm.addRider(this.tt);
+			rm.addRider(this.sprinter);
+			rm.addRider(this.climber);
+
+			this.team1 = new Team({
+				name: "Thirsty-Kombucha",
+				riders: [this.roster1.tt, this.roster1.sprinter, this.roster1.climber]
+			});
+
+			rm.addTeam(this.team1);
+
+			rm.getPeloton().setEffort({power: 300});
+
+			this.rm = rm;
+
+			this.roster1.sprinter.y = 1;
+
+			//this.rm.escapeRider(this.roster1.sprinter);
+
+			this.ri = new RaceInterface({
+				raceManager: this.rm,
+				team: this.team1
+			});
+
+			// they should form a bunch
+			// and one rider tries to pass by them
+		});
+
+		it("Riders take up space on the road", function (done) {
 			this.rm.runToFinish({callback: done});
 		});
 	});

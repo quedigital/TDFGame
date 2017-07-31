@@ -217,6 +217,10 @@ define(["d3"], function (d3) {
 
 	Rider.DRAFT_PERCENT = .8;
 
+	Rider.sortByDistance = function (a, b) {
+		return a.distance < b.distance;
+	};
+
 	Rider.prototype = {
 		reset: function () {
 			this.distance = 0;
@@ -245,6 +249,8 @@ define(["d3"], function (d3) {
 			this.powerLookup = {};
 
 			this.createPowerLookup();
+
+			this.x = 0;
 		},
 
 		setupPowerFactors: function () {
@@ -312,10 +318,6 @@ define(["d3"], function (d3) {
 
 		// step 1 second
 		step: function (gradient, distanceToFinish) {
-			if (this.options.name == "TT Solo") {
-				var a = 5;
-			}
-
 			var lastDistance = this.distance;
 			var lastTime = this.time;
 
@@ -552,6 +554,11 @@ define(["d3"], function (d3) {
 			}
 
 			if (this.effort <= 0) this.effort = .01;
+
+			if (this.isInGroup() && this.isGroupLeader()) {
+				var group = this.getGroup();
+				group.setEffort(val);
+			}
 		},
 
 		setGroup: function (group) {
